@@ -53,14 +53,15 @@ class CustomPlayer:
         A strictly positive integer (i.e., 1, 2, 3,...) for the number of
         layers in the game tree to explore for fixed-depth search. (i.e., a
         depth of one (1) would only explore the immediate sucessors of the
-        current state.)
+        current state.)  This parameter should be ignored when iterative = True.
 
     score_fn : callable (optional)
         A function to use for heuristic evaluation of game states.
 
     iterative : boolean (optional)
         Flag indicating whether to perform fixed-depth search (False) or
-        iterative deepening search (True).
+        iterative deepening search (True).  When True, search_depth should
+        be ignored and no limit to search depth.
 
     method : {'minimax', 'alphabeta'} (optional)
         The name of the search method to use in get_move().
@@ -101,8 +102,7 @@ class CustomPlayer:
             game (e.g., player locations and blocked cells).
 
         legal_moves : list<(int, int)>
-            A list containing legal moves. Moves are encoded as tuples of pairs
-            of ints defining the next (row, col) for the agent to occupy.
+            DEPRECATED -- This argument will be removed in the next release
 
         time_left : callable
             A function that returns the number of milliseconds left in the

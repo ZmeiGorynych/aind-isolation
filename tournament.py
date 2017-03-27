@@ -64,6 +64,7 @@ def play_match(player1, player2):
     positions. This should control for differences in outcome resulting from
     advantage due to starting position on the board.
     """
+    print('beginning a match!')
     num_wins = {player1: 0, player2: 0}
     num_timeouts = {player1: 0, player2: 0}
     num_invalid_moves = {player1: 0, player2: 0}
@@ -114,7 +115,7 @@ def play_round(agents, num_matches):
     print("----------")
 
     for idx, agent_2 in enumerate(agents[:-1]):
-
+        print('aaa')
         counts = {agent_1.player: 0., agent_2.player: 0.}
         names = [agent_1.name, agent_2.name]
         print("  Match {}: {!s:^11} vs {!s:^11}".format(idx + 1, *names), end=' ')

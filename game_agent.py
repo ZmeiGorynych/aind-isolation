@@ -37,8 +37,8 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
 
-    # TODO: finish this function!
-    raise NotImplementedError
+    return float(len(game.get_legal_moves(player)))
+    #raise NotImplementedError
 
 
 class CustomPlayer:
@@ -124,19 +124,44 @@ class CustomPlayer:
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
 
+        # check if I have an initial position?
+
+        moves = game.get_legal_moves(self)
+        # why would I select a first move from an opening book rather than straight?
+            # loc = game.get_player_location()
+            # if not loc:
+            # TODO: better first move?
+        if not len(moves):
+            return (-1,-1)
+
         try:
+            if self.method == 'minimax':
+                func = self.minimax
+            elif self.method == 'alphabeta':
+                func = self.alphabeta
+            else:
+                raise ValueError('The method is not minimax or alphabeta, don\'t understand ' + self.method)
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            pass
+            if self.iterative:
+                depth = 0
+                while True:
+                    #print(depth, self.time_left())
+                    depth += 1
+                    if self.method=='minimax':
+                        score, bestmove = func(game,depth,maximizing_player=True)
+            else:
+                score, bestmove = func(game, self.search_depth, maximizing_player=True)
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
             pass
 
         # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        return bestmove
+        #raise NotImplementedError
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -171,9 +196,31 @@ class CustomPlayer:
         """
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
+        # so convention is score from my perspective
+        # the move would be the active player's position, but why bother?
+        if depth == 0:
+            return (self.score(game, self),None)
 
         # TODO: finish this function!
-        raise NotImplementedError
+        # get legal moves
+        moves = game.get_legal_moves(game.active_player)
+        if not len(moves):
+            return (0,(-1,-1))
+        # spawn a new board for each possible legal move
+        scores = []
+        for move in moves:
+            thisgame = game.forecast_move(move)
+            thisscore = self.minimax(thisgame, depth-1, not maximizing_player)
+            scores.append((thisscore[0], move))
+            if maximizing_player:
+                best_score = max(scores, key=lambda x: x[0])
+            else:
+                best_score = min(scores, key=lambda x: x[0])
+            scores = [best_score]
+
+        return best_score
+
+
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -213,8 +260,31 @@ class CustomPlayer:
                 to pass the project unit tests; you cannot call any other
                 evaluation function directly.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise Timeout()
+        if depth == 0:
+            return (self.score(game, self), None) # so convention is score from my perspective
 
         # TODO: finish this function!
-        raise NotImplementedError
+        # get legal moves
+        moves = game.get_legal_moves(game.active_player)
+        if not len(moves):
+            return (0,(-1,-1))
+        # spawn a new board for each possible legal move
+        scores = []
+        for move in moves:
+            thisgame = game.forecast_move(move)
+            thisscore = self.alphabeta(thisgame, depth-1, alpha, beta, not maximizing_player)
+            scores.append((thisscore[0], move))
+            if maximizing_player:
+                best_score = max(scores, key=lambda x: x[0])
+                if best_score[0] >= beta:
+                    return best_score
+                alpha = max(alpha, best_score[0])
+            else:
+                best_score = min(scores, key=lambda x: x[0])
+                if best_score[0] <= alpha:
+                    return best_score
+                beta = min(beta, best_score[0])
+
+            scores = [best_score]
+
+        return best_score

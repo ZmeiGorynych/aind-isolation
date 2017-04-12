@@ -49,7 +49,7 @@ class Board(object):
         # The last 3 entries of the board state includes initiative (0 for
         # player 1, 1 for player 2) player 2 last move, and player 1 last move
         self._board_state = [Board.BLANK] * (width * height + 3)
-        self._board_state[0] = Board.NOT_MOVED
+        self._board_state[-2] = Board.NOT_MOVED
         self._board_state[-1] = Board.NOT_MOVED
 
     def hash(self):
@@ -316,6 +316,11 @@ class Board(object):
 
         time_millis = lambda: 1000 * timeit.default_timer()
 
+        game_report = {}
+        game_report['moves'] = []
+        move_infos = []
+        from reporting import Reporting
+        reporter =Reporting()
         while True:
 
             legal_player_moves = self.get_legal_moves()
@@ -323,19 +328,34 @@ class Board(object):
 
             move_start = time_millis()
             time_left = lambda : time_limit - (time_millis() - move_start)
-            curr_move = self._active_player.get_move(
+            curr_move, info = self._active_player.get_move(
                 game_copy, legal_player_moves, time_left)
             move_end = time_left()
-
+            try:
+                info['active_player'] = self._active_player
+            except:
+                pass
+            game_report['moves'].append(info)
+            #print(curr_move, self.move_count, self._active_player)
             if curr_move is None:
                 curr_move = Board.NOT_MOVED
 
             if move_end < 0:
+                print('timeout!')
+                game_report['reason'] = 'timeout'
+                reporter.report.append(game_report)
+
                 return self._inactive_player, move_history, "timeout"
 
             if curr_move not in legal_player_moves:
                 if len(legal_player_moves) > 0:
+                    print('forfeit!')
+                    game_report['reason'] = 'forfeit'
+                    reporter.report.append(game_report)
+
                     return self._inactive_player, move_history, "forfeit"
+                game_report['reason'] = 'lost'
+                reporter.report.append(game_report)
                 return self._inactive_player, move_history, "illegal move"
 
             move_history.append(list(curr_move))

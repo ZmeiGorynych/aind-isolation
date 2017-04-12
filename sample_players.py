@@ -125,8 +125,8 @@ class RandomPlayer():
         """
 
         if not legal_moves:
-            return (-1, -1)
-        return legal_moves[randint(0, len(legal_moves) - 1)]
+            return ((-1, -1), None)
+        return (legal_moves[randint(0, len(legal_moves) - 1)], None)
 
 
 class GreedyPlayer():
@@ -165,9 +165,9 @@ class GreedyPlayer():
         """
 
         if not legal_moves:
-            return (-1, -1)
+            return ((-1, -1), None)
         _, move = max([(self.score(game.forecast_move(m), self), m) for m in legal_moves])
-        return move
+        return (move, None)
 
 
 class HumanPlayer():

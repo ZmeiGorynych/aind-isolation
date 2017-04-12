@@ -31,9 +31,14 @@ from sample_players import null_score
 from sample_players import open_move_score
 from sample_players import improved_score
 from game_agent import CustomPlayer
-from game_agent import custom_score
+from game_agent_2 import CustomPlayer2
+from value_functions import improved_score_fast, improved_score_fast_x2_naive, \
+    improved_score_fast_x2, partition_score, partition_score_x2, \
+    improved_original_score_fast, improved_score_fast_x3
+from game_agent_3 import CustomPlayer3, partition_score_2
+from game_agent_comp import CustomPlayerComp
 
-NUM_MATCHES = 5  # number of matches against each opponent
+NUM_MATCHES = 1  # number of matches against each opponent
 TIME_LIMIT = 150  # number of milliseconds before timeout
 
 TIMEOUT_WARNING = "One or more agents lost a match this round due to " + \
@@ -64,7 +69,6 @@ def play_match(player1, player2):
     positions. This should control for differences in outcome resulting from
     advantage due to starting position on the board.
     """
-    print('beginning a match!')
     num_wins = {player1: 0, player2: 0}
     num_timeouts = {player1: 0, player2: 0}
     num_invalid_moves = {player1: 0, player2: 0}
@@ -78,6 +82,7 @@ def play_match(player1, player2):
 
     # play both games and tally the results
     for game in games:
+        #print('another game:')
         winner, _, termination = game.play(time_limit=TIME_LIMIT)
 
         if player1 == winner:
@@ -115,7 +120,7 @@ def play_round(agents, num_matches):
     print("----------")
 
     for idx, agent_2 in enumerate(agents[:-1]):
-        print('aaa')
+        #print('aaa')
         counts = {agent_1.player: 0., agent_2.player: 0.}
         names = [agent_1.name, agent_2.name]
         print("  Match {}: {!s:^11} vs {!s:^11}".format(idx + 1, *names), end=' ')
@@ -136,7 +141,7 @@ def play_round(agents, num_matches):
     return 100. * wins / total
 
 
-def main():
+def tournament(num_matches = None, time_limit = None, test_agents = None, opponents = None):
 
     HEURISTICS = [("Null", null_score),
                   ("Open", open_move_score),
@@ -156,13 +161,37 @@ def main():
                        "AB_" + name) for name, h in HEURISTICS]
     random_agents = [Agent(RandomPlayer(), "Random")]
 
+    improved_agent = [Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")]
+
     # ID_Improved agent is used for comparison to the performance of the
     # submitted agent for calibration on the performance across different
     # systems; i.e., the performance of the student agent is considered
     # relative to the performance of the ID_Improved agent to account for
     # faster or slower computers.
-    test_agents = [Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved"),
-                   Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "Student")]
+    if test_agents is None:
+        test_agents = [ #Agent(CustomPlayer(score_fn= partition_score, **CUSTOM_ARGS), "Partitioning"),
+                        #Agent(CustomPlayer(score_fn=partition_score_x2, **CUSTOM_ARGS), "Partitioning with two steps"),
+                        #Agent(CustomPlayer3(score_fn=partition_score_2, **CUSTOM_ARGS), "Partitioning + caching"),
+                        #Agent(CustomPlayer(score_fn=improved_score_fast_x2, **CUSTOM_ARGS), "improved, two steps exact"),
+                        #Agent(CustomPlayer(score_fn=improved_score_fast_x2, **CUSTOM_ARGS), "improved, two steps exact"),
+                        #Agent(CustomPlayer(score_fn=improved_score_fast_x3, **CUSTOM_ARGS), "improved, three steps exact"),
+                        Agent(CustomPlayerComp(score_fn=improved_score_fast_x2, **CUSTOM_ARGS), "improved, two steps exact, with reporting"),
+                        #Agent(CustomPlayer(score_fn=lambda x,y: improved_score_fast_x3(x, y,10), **CUSTOM_ARGS), "improved, three steps exact, mult 10"),
+                        #Agent(CustomPlayer(score_fn=improved_score_fast_x2_naive, **CUSTOM_ARGS), "improved, two steps naive"),
+                        #Agent(CustomPlayer(score_fn=improved_score_fast, **CUSTOM_ARGS), "Faster improved"),
+                        #Agent(CustomPlayer(score_fn=improved_original_score_fast, **CUSTOM_ARGS), "Faster improved original"),
+                        #Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")
+                        ]
+
+    if opponents is None:
+        opponents = random_agents + mm_agents + ab_agents + improved_agent
+
+    if num_matches is None:
+        num_matches = NUM_MATCHES
+
+    if time_limit is None:
+        time_limit = TIME_LIMIT
+
 
     print(DESCRIPTION)
     for agentUT in test_agents:
@@ -171,13 +200,18 @@ def main():
         print("{:^25}".format("Evaluating: " + agentUT.name))
         print("*************************")
 
-        agents = random_agents + mm_agents + ab_agents + [agentUT]
-        win_ratio = play_round(agents, NUM_MATCHES)
+        agents = opponents + [agentUT]
+                 #improved_agent + [
+
+        win_ratio = play_round(agents, num_matches)
 
         print("\n\nResults:")
         print("----------")
         print("{!s:<15}{:>10.2f}%".format(agentUT.name, win_ratio))
 
+    from reporting import Reporting
+    r = Reporting()
+    return r.report
 
 if __name__ == "__main__":
-    main()
+    tournament()

@@ -92,281 +92,7 @@ def partition2(game, move_dict, my_pos, other_pos):
 
     return this_component_size - other_component_size
 
-def custom_score_3(game, player):
-    """The "Improved" evaluation function discussed in lecture that outputs a
-    score equal to the difference in the number of moves available to the
-    two players.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : hashable
-        One of the objects registered by the game object as a valid player.
-        (i.e., `player` should be either game.__player_1__ or
-        game.__player_2__).
-
-    Returns
-    ----------
-    float
-        The heuristic value of the current game state
-    """
-
-    move_dict = player.move_dict
-    own_moves = num_legal_moves(player, game, move_dict)
-    opp_moves = num_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and opp_moves == 0
-    is_loser = (player == game.active_player) and own_moves == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    if game.move_count >=8 : # arbitrary attempt at optimization
-        score1 = partition(game, player.move_dict,
-                           game.get_player_location(player),
-                           game.get_player_location(game.get_opponent(player)))
-
-        if score1 != 0:
-            #print('partition detected!', game.move_count, 100* score1 )
-            return 100 * score1
-
-
-    return float(own_moves - 2*opp_moves)
-
-def custom_score_1(game, player):
-    """The "Improved" evaluation function discussed in lecture that outputs a
-    score equal to the difference in the number of moves available to the
-    two players.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : hashable
-        One of the objects registered by the game object as a valid player.
-        (i.e., `player` should be either game.__player_1__ or
-        game.__player_2__).
-
-    Returns
-    ----------
-    float
-        The heuristic value of the current game state
-    """
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
-        return float("inf")
-
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - 2*opp_moves)
-
-def custom_score_2(game, player):
-    move_dict = player.move_dict
-    own_moves = num_legal_moves(player, game, move_dict)
-    opp_moves = num_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and opp_moves == 0
-    is_loser = (player == game.active_player) and own_moves == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    return float(own_moves - 2*opp_moves)
-
-
-def custom_score(game, player):
-    """Calculate the heuristic value of a game state from the point of view
-    of the given player.
-
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-
-    Returns
-    -------
-    float
-        The heuristic value of the current game state to the specified player.
-    """
-
-    return float(len(game.get_legal_moves(player)))
-    #raise NotImplementedError
-
-
-def generate_all_moves():
-    from sample_players import RandomPlayer
-    from isolation import Board
-
-    move_dict = {}
-    player1 = RandomPlayer()
-    player2 = RandomPlayer()
-    game = Board(player1, player2)
-    all_moves = game.get_legal_moves(player1)
-    print(len(all_moves))
-    for move in all_moves:
-        new_game = game.forecast_move(move)
-        move_dict[move] = set(new_game.get_legal_moves(player1))
-        #print(len(move_dict[move]))
-    return move_dict
-
-
-def partition(game, move_dict, my_pos, other_pos=None):
-    this_component_size = 1
-    prev_nodes = {}
-    latest_nodes = set([my_pos])
-    while len(latest_nodes):
-        next_nodes = set()
-        for x in latest_nodes:
-            # what are the moves we can get to from the current boundary?
-            for move in move_dict[x]:
-                if move == other_pos:
-                    return 0  # we're in the same component of the board
-                if move not in prev_nodes and game.move_is_legal(move):
-                    next_nodes.add(move)
-        prev_nodes = latest_nodes
-        latest_nodes = next_nodes
-        this_component_size += len(latest_nodes)
-        #print(this_component_size)
-
-    # if we got this far, the two players are in unconnected components of the board
-    if other_pos is None:
-        return this_component_size
-    else:
-        return this_component_size - partition(game, move_dict, other_pos)
-
-
-def partition2(game, move_dict, my_pos, other_pos):
-    this_component_size = 1
-    prev_nodes = {}
-    latest_nodes = set([my_pos])
-    while len(latest_nodes):
-        next_nodes = set()
-        for x in latest_nodes:
-            # what are the moves we can get to from the current boundary?
-            for move in move_dict[x]:
-                if move == other_pos:
-                    return 0  # we're in the same component of the board
-                if move not in prev_nodes and game.move_is_legal(move):
-                    next_nodes.add(move)
-        prev_nodes = latest_nodes
-        latest_nodes = next_nodes
-        this_component_size += len(latest_nodes)
-        #print(this_component_size)
-
-    # if we got this far, the two players are in unconnected components of the board
-    other_component_size = 1
-    prev_nodes = {}
-    latest_nodes = set([other_pos])
-    while len(latest_nodes):
-        next_nodes = set()
-        for x in latest_nodes:
-            # what are the moves we can get to from the current boundary?
-            for move in move_dict[x]:
-                if move == other_pos:
-                    return 0  # we're in the same component of the board
-                if move not in prev_nodes and game.move_is_legal(move):
-                    next_nodes.add(move)
-        prev_nodes = latest_nodes
-        latest_nodes = next_nodes
-        other_component_size += len(latest_nodes)
-
-    return this_component_size - other_component_size
-
-def partition_score(game, player):
-    """The "Improved" evaluation function discussed in lecture that outputs a
-    score equal to the difference in the number of moves available to the
-    two players.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : hashable
-        One of the objects registered by the game object as a valid player.
-        (i.e., `player` should be either game.__player_1__ or
-        game.__player_2__).
-
-    Returns
-    ----------
-    float
-        The heuristic value of the current game state
-    """
-
-    if player.game_partitioned:
-        return open_fast_x2_naive(game,player)
-
-    move_dict = player.move_dict
-    own_moves = num_legal_moves(player, game, move_dict)
-    opp_moves = num_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and opp_moves == 0
-    is_loser = (player == game.active_player) and own_moves == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    if game.move_count >=8 : # arbitrary attempt at optimization
-        score1 = partition(game, player.move_dict,
-                           game.get_player_location(player),
-                           game.get_player_location(game.get_opponent(player)))
-
-        if score1 != 0:
-            #print('partition detected!', game.move_count, 100* score1 )
-            return 100 * score1
-
-
-    return float(own_moves - 2*opp_moves)
-
-def partition_score_x2(game, player):
-    """The "Improved" evaluation function discussed in lecture that outputs a
-    score equal to the difference in the number of moves available to the
-    two players.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : hashable
-        One of the objects registered by the game object as a valid player.
-        (i.e., `player` should be either game.__player_1__ or
-        game.__player_2__).
-
-    Returns
-    ----------
-    float
-        The heuristic value of the current game state
-    """
-
-    if player.game_partitioned:
-        return open_fast_x2_naive(game,player)
+def improved_score_fast_x2_naive(game, player):
 
     move_dict = player.move_dict
     own_moves = fast_legal_moves(player, game, move_dict)
@@ -381,6 +107,53 @@ def partition_score_x2(game, player):
     if is_winner:
         return float("inf")
 
+    own_moves_x2 = 0
+    for move in own_moves:
+        own_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
+    opp_moves_x2 = 0
+    for move in opp_moves:
+        opp_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
+
+    return float(own_moves_x2 - 2*opp_moves_x2)
+
+def partition_score_2(game, player):
+    """The "Improved" evaluation function discussed in lecture that outputs a
+    score equal to the difference in the number of moves available to the
+    two players.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+
+    if player.game_partitioned:
+        return improved_score_fast_x2_naive(game,player)
+
+    move_dict = player.move_dict
+    own_moves = num_legal_moves(player, game, move_dict)
+    opp_moves = num_legal_moves(game.get_opponent(player), game, move_dict)
+
+    is_winner = (player == game.inactive_player) and opp_moves == 0
+    is_loser = (player == game.active_player) and own_moves == 0
+
+    if is_loser:
+        return float("-inf")
+
+    if is_winner:
+        return float("inf")
+
     if game.move_count >=8 : # arbitrary attempt at optimization
         score1 = partition(game, player.move_dict,
                            game.get_player_location(player),
@@ -390,19 +163,8 @@ def partition_score_x2(game, player):
             #print('partition detected!', game.move_count, 100* score1 )
             return 100 * score1
 
-    own_moves_x2 = set(own_moves)
-    for move in own_moves:
-        x2 = fast_legal_moves_from_move(move, game, move_dict)
-        for x in x2:
-            own_moves_x2.add(x)
-    opp_moves_x2 = set(opp_moves)
-    for move in opp_moves:
-        x2 = fast_legal_moves_from_move(move, game, move_dict)
-        for x in x2:
-            opp_moves_x2.add(x)
 
-    return float(len(own_moves_x2) - 2 * len(opp_moves_x2))
-
+    return float(own_moves - 2*opp_moves)
 
 def custom_score_1(game, player):
     """The "Improved" evaluation function discussed in lecture that outputs a
@@ -452,14 +214,14 @@ def improved_score_fast(game, player):
 
     return float(own_moves - 2*opp_moves)
 
-def improved_original_score_fast(game, player):
+def improved_score_fast_x2(game, player):
 
     move_dict = player.move_dict
-    own_moves = num_legal_moves(player, game, move_dict)
-    opp_moves = num_legal_moves(game.get_opponent(player), game, move_dict)
+    own_moves = fast_legal_moves(player, game, move_dict)
+    opp_moves = fast_legal_moves(game.get_opponent(player), game, move_dict)
 
-    is_winner = (player == game.inactive_player) and opp_moves == 0
-    is_loser = (player == game.active_player) and own_moves == 0
+    is_winner = (player == game.inactive_player) and len(opp_moves) == 0
+    is_loser = (player == game.active_player) and len(own_moves) == 0
 
     if is_loser:
         return float("-inf")
@@ -467,7 +229,14 @@ def improved_original_score_fast(game, player):
     if is_winner:
         return float("inf")
 
-    return float(own_moves - opp_moves)
+    own_moves_x2 = 0
+    for move in own_moves:
+        own_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
+    opp_moves_x2 = 0
+    for move in opp_moves:
+        opp_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
+
+    return float(own_moves_x2 - opp_moves_x2)
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -492,107 +261,12 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
 
-    return improved_score_fast_x2(game, player)
-
-
-
-def improved_score_fast_x2(game, player):
-    try:
-        move_dict = player.move_dict
-    except: #if we're called inside a test without a properly initialized player
-        return 0.0
-
-    own_moves = fast_legal_moves(player, game, move_dict)
-    opp_moves = fast_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and len(opp_moves) == 0
-    is_loser = (player == game.active_player) and len(own_moves) == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    own_moves_x2 = set(own_moves)
-    for move in own_moves:
-        x2 = fast_legal_moves_from_move(move, game, move_dict)
-        for x in x2:
-            own_moves_x2.add(x)
-    opp_moves_x2 = set(opp_moves)
-    for move in opp_moves:
-        x2 = fast_legal_moves_from_move(move, game, move_dict)
-        for x in x2:
-            opp_moves_x2.add(x)
-
-    return float(len(own_moves_x2) - 2*len(opp_moves_x2))
-
-def improved_score_fast_x2_naive(game, player):
-
     move_dict = player.move_dict
-    own_moves = fast_legal_moves(player, game, move_dict)
-    opp_moves = fast_legal_moves(game.get_opponent(player), game, move_dict)
+    own_moves = num_legal_moves(player, game, move_dict)
 
-    is_winner = (player == game.inactive_player) and len(opp_moves) == 0
-    is_loser = (player == game.active_player) and len(own_moves) == 0
+    return own_moves
+    #raise NotImplementedError
 
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    own_moves_x2 = 0
-    for move in own_moves:
-        own_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
-    opp_moves_x2 = 0
-    for move in opp_moves:
-        opp_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
-
-    return float(own_moves_x2 - 2*opp_moves_x2)
-
-def open_fast_x2_naive(game, player):
-
-    move_dict = player.move_dict
-    own_moves = fast_legal_moves(player, game, move_dict)
-    opp_moves = fast_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and len(opp_moves) == 0
-    is_loser = (player == game.active_player) and len(own_moves) == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    own_moves_x2 = 0
-    for move in own_moves:
-        own_moves_x2 += num_legal_moves_from_move(move, game, move_dict)
-
-    return float(own_moves_x2)
-
-def open_fast_x2(game, player):
-    move_dict = player.move_dict
-    own_moves = fast_legal_moves(player, game, move_dict)
-    opp_moves = fast_legal_moves(game.get_opponent(player), game, move_dict)
-
-    is_winner = (player == game.inactive_player) and len(opp_moves) == 0
-    is_loser = (player == game.active_player) and len(own_moves) == 0
-
-    if is_loser:
-        return float("-inf")
-
-    if is_winner:
-        return float("inf")
-
-    own_moves_x2 = set(own_moves)
-    for move in own_moves:
-        x2 = fast_legal_moves_from_move(move, game, move_dict)
-        for x in x2:
-            own_moves_x2.add(x)
-
-    return float(len(own_moves_x2))
 
 def num_legal_moves(player, game, move_dict):
     move = game.get_player_location(player)
@@ -614,7 +288,7 @@ def fast_legal_moves_from_move(move, game, move_dict):
     possibles = move_dict[move]
     return [x for x in possibles if game.move_is_legal(x)]
 
-class CustomPlayer:
+class CustomPlayer3:
     """Game-playing agent that chooses a move using your evaluation function
     and a depth-limited minimax algorithm with alpha-beta pruning. You must
     finish and test this player to make sure it properly uses minimax and
@@ -646,7 +320,7 @@ class CustomPlayer:
     """
 
     def __init__(self, search_depth=3, score_fn=custom_score_1,
-                 iterative=True, method='minimax', timeout=10.):
+                 iterative=True, method='minimax', timeout=20.):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn
@@ -654,7 +328,10 @@ class CustomPlayer:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
         self.move_dict = generate_all_moves()
-        self.board_cache = [0]*49
+        self.cached_tree = {}
+
+
+
 
 
     def get_move(self, game, legal_moves, time_left):
@@ -701,28 +378,26 @@ class CustomPlayer:
 
         # check if I have an initial position?
 
-        moves = game.get_legal_moves(self)
+        moves = fast_legal_moves(self, game, self.move_dict)
 
         # why would I select a first move from an opening book rather than straight?
             # loc = game.get_player_location()
             # if not loc:
             # TODO: better first move?
-        info = {}
-        info['depth'] = 0
-
         if not len(moves):
-            return ((-1,-1), info)
+            return (-1,-1)
 
-
-        if self.score == partition_score or self.score == partition_score_x2: # don't need this data otherwise
+        if self.score == partition_score_2: # don't need this data otherwise
             partition_score_ = partition(game, self.move_dict,
                                game.get_player_location(self),
                                game.get_player_location(game.get_opponent(self)))
 
             if partition_score_ is not 0:
                 self.game_partitioned = True
+                self.cached_tree = {} # will move to a different heuristic now so need to reset cache
             else:
                 self.game_partitioned = False
+
 
         depth = 0
         try:
@@ -737,6 +412,17 @@ class CustomPlayer:
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
             if self.iterative:
+                if game.move_count <= 3:
+                    self.cached_tree = {}
+                if len(self.cached_tree):
+                    # look up the last two moves and get that cached branch:
+                    my_prev_move = game.get_player_location(self)
+                    opp_prev_move = game.get_player_location(game.get_opponent(self))
+                    if 'my_prev_move' in self.cached_tree and 'opp_prev_move' in self.cached_tree['my_prev_move']:
+                        self.cached_tree = self.cached_tree[my_prev_move][opp_prev_move]
+                    #except:
+                        #raise ValueError('something went wrong with the cache?')
+                        #self.cached_tree = {}
                 while True:
                     #print(depth, self.time_left())
                     depth += 1
@@ -750,12 +436,9 @@ class CustomPlayer:
             #print('depth reached: ', depth)
             pass
 
-        if self.iterative:
-            info['depth'] = depth
-        else:
-            info['depth'] = self.search_depth
         # Return the best move from the last completed search iteration
-        return (bestmove, info)
+        #print(bestmove)
+        return bestmove
         #raise NotImplementedError
 
     def minimax(self, game, depth, maximizing_player=True):
@@ -792,7 +475,7 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
         # if the game is over
-        moves = game.get_legal_moves(game.active_player)
+        moves = fast_legal_moves(game.active_player, game, self.move_dict)
         if not len(moves):  # if no legal moves
             if self == game.active_player:
                 return (float('-inf'), (-1, -1))
@@ -822,7 +505,7 @@ class CustomPlayer:
 
 
 
-    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
+    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True, cached_tree = None):
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
 
@@ -869,16 +552,26 @@ class CustomPlayer:
             #print('timeout!')
             raise Timeout()
 
+        if cached_tree is None:
+            cached_tree = self.cached_tree
+
         # if the game is over
-        moves = game.get_legal_moves(game.active_player)
+        moves = fast_legal_moves(game.active_player, game, self.move_dict)
         if not len(moves):  # if no legal moves
             if self == game.active_player:
-                return (float('-inf'), (-1, -1))
+                score = (float('-inf'), (-1, -1))
             else:
-                return (float('inf'), (-1, -1))
+                score = (float('inf'), (-1, -1))
 
+            #cached_tree['score'] = score
+            return score
+
+
+        # if we didn't win or lose:
         if depth == 0:
-            return (self.score(game, self), None) # so convention is score from my perspective
+            score = (self.score(game, self), None)
+            #cached_tree['score'] = score
+            return score
 
         # TODO: finish this function!
         # get legal moves
@@ -886,20 +579,40 @@ class CustomPlayer:
         # spawn a new board for each possible legal move
         scores = []
         for move in moves:
-            thisgame = game.forecast_move(move)
-            thisscore = self.alphabeta(thisgame, depth-1, alpha, beta, not maximizing_player)
+            thisscore = None
+            if move in cached_tree and 'score' in cached_tree[move]:
+                cached_score = cached_tree[move]['score']
+                if (cached_score[0] == float('inf') and maximizing_player) \
+                        or (cached_score[0] == float('-inf') and not maximizing_player):
+                    thisscore = cached_score # no need to re-run known winning or losing branches
+                    return thisscore
+            else:
+                cached_tree[move] = {}
+
+            if thisscore is None:
+                thisgame = game.forecast_move(move)
+                thisscore = self.alphabeta(thisgame, depth-1, alpha, beta, not maximizing_player, cached_tree[move])
+
+            if thisscore[0] == (float('-inf'), (-1, -1)) or thisscore[0] == (float('inf'), (-1, -1)):
+                cached_tree[move]['score'] = (thisscore[0], move) # cache actual wins or losses
+
             scores.append((thisscore[0], move))
+
             if maximizing_player:
                 best_score = max(scores, key=lambda x: x[0])
                 if best_score[0] >= beta:
+                    #cached_tree['score'] = best_score
                     return best_score
                 alpha = max(alpha, best_score[0])
             else:
                 best_score = min(scores, key=lambda x: x[0])
                 if best_score[0] <= alpha:
+                    #cached_tree['score'] = best_score
                     return best_score
                 beta = min(beta, best_score[0])
 
             scores = [best_score]
+
+        #cached_tree['score'] = best_score
 
         return best_score

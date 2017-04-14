@@ -7,6 +7,10 @@ def to_index(pair, board_size = 7):
 def to_pair(index, board_size = 7): # correct?
     return (index%board_size, int(index/board_size))
 
+def square_print(vec):
+    for i in range(7):
+        print(vec[i*7:(i+1)*7])
+
 def generate_all_moves_by_index():
     from sample_players import RandomPlayer
     from isolation import Board
@@ -16,7 +20,7 @@ def generate_all_moves_by_index():
     player2 = RandomPlayer()
     game = Board(player1, player2)
     all_moves = game.get_legal_moves(player1)
-    print(len(all_moves))
+    #print(len(all_moves))
     for move in all_moves:
         new_game = game.forecast_move(move)
         move_dict[to_index(move)] =\
@@ -37,30 +41,53 @@ def rotation_matrices():
 
 def rotate_index(ind, mat):
     pair = to_pair(ind)
-    point = np.array(pair) - 3.5
-    r_point = (mat.dot(point) + 3.6).astype(int)
+    point = np.array(pair) - 3
+    r_point = (mat.dot(point) + 3.1).astype(int)
     return to_index(r_point)
+
 
 def correct_octile(index):
     pair = to_pair(index)
-    return pair[0] <=3 and pair[1] <=3 and pair[0] <= pair[1]
+    return pair[1] <=3 and pair[0] <= pair[1]
 
 def move_convolution_indices():
     move_dict = generate_all_moves_by_index()
     cell_index_dict = {}
     coeff_index_dict = {}
     # first pass: for the preferred octile fields, populate coeff_index with sequential coeffs
-    # TODO: add self to list of neighbors
     # TODO: additional symmetry in the correct octile coeffs
-    # TODO: make sure own coeffs are 0:48
-    n = 0
+    #make sure offsets are 0:10, own coeffs 10:20
+    own_n = 0
+    n = 20
     for index, value in move_dict.items():
         if correct_octile(index):
-            cell_index_dict[index] = move_dict[index]
-            coeff_index_dict[index] = []
-            for i in range(len(value)):
-                coeff_index_dict[index].append(n)
-                n += 1
+            cell_index_dict[index] = [-1, index] + move_dict[index] #add self to list of neighbors
+            coeff_index_dict[index] = [own_n, own_n + 10] # make sure offsets are 0:10, own coeffs 10:20
+            own_n += 1
+            # additional symmetry in the correct octile coeffs
+            pair = to_pair(index)
+            if pair[0]==pair[1]:
+                mat = np.array([[0,1],[1,0]])
+            elif pair[1] == 3:
+                mat = np.array([[1,0],[0,-1]])
+            else:
+                mat = None
+
+            if mat is None:
+                for i in range(len(value)):
+                    coeff_index_dict[index].append(n)
+                    n += 1
+            else:
+                moves_so_far = set()
+                for ind in move_dict[index]:
+                    twin = rotate_index(ind, mat)
+                    if twin not in moves_so_far:
+                        coeff_index_dict[index].append(n)
+                        moves_so_far.add(ind)
+                        n += 1
+                    else:
+                        twin_coeff = [c for ci, c in enumerate(coeff_index_dict[index][2:]) if move_dict[index][ci] == twin][0]
+                        coeff_index_dict[index].append(twin_coeff)
 
     # second pass: for all other moves x, find F that moves x into the right octile,
     # assign to x the same coeff_indices as to F(x), and the same cell_index as F_inv(cell_index(F(x))
@@ -73,12 +100,11 @@ def move_convolution_indices():
                     if correct_octile(rotated_index):
                         break
 
+                coeff_index_dict[index] = coeff_index_dict[rotated_index]
                 inv_mat = np.linalg.inv(mat)
-                coeff_index_dict[index] = []
-                cell_index_dict[index] = []
-                for i in range(len(value)):
-                    coeff_index_dict[index].append(coeff_index_dict[rotated_index][i])
-                    cell_index_dict[index].append(rotate_index(cell_index_dict[rotated_index][i], inv_mat))
+                cell_index_dict[index] = [-1, index]
+                for cind in cell_index_dict[rotated_index][2:]:
+                    cell_index_dict[index].append(rotate_index(cind, inv_mat))
         # now join them up
     joint_indices = {}
     Point = namedtuple('Point',['field','coeff'])
@@ -100,11 +126,12 @@ class MoveConvolutionIndices:
 
 def move_convolution(move_vec, coeff_vec, joint_indices,
                      mask = None, result_vector = np.array([0]*49)):
-    for index, indlist in joint_indices:
-        result_vector[index] = 0
+    for index, indlist in joint_indices.items():
+        # first coeff is offset
+        result_vector[index] = coeff_vec[indlist[0][1]]
         # if some of the fields have to be 0 regardless, no point in computing them
         if mask is None or mask[index] > 0:
-            for i in indlist:
+            for i in indlist[1:]:
                 result_vector[index] += move_vec[i[0]] * coeff_vec[i[1]]
 
     return result_vector
@@ -124,87 +151,99 @@ def move_convolution_grad(move_vec, coeff_vec, joint_indices,
 
 
 class ConvolutionUnit:
-    def __init__(self, coeffs = None, output_vec = None, input_vec = None, mask = None):
+    def __init__(self):
 
         self.joint_indices, self.coeff_len = MoveConvolutionIndices()()
+        self.input_len = 7*7
+        self.output_len = 7*7
+        self.output_vec = np.zeros(self.output_len)
 
-        if coeffs is None:
-            self.coeffs = np.zeros([self.coeff_len])
-        else:
-            self.coeffs = coeffs
+    def set_coeff(self, coeff):
+        self.coeff = coeff
 
-        if input_vec is None:
-            self.input_vec = np.zeros([7*7])# TODO: get size from static config singleton
-        else:
-            self.input_vec = input_vec
+    def __call__(self, input_vec, mask = None):
+        self.input_vec = input_vec
+        return move_convolution(input_vec, self.coeff, self.joint_indices, mask, self.output_vec)
 
-        if mask is None:
-            self.mask = np.zeros([7*7])# TODO: get size from static config singleton
-        else:
-            self.mask = input_vec
-
-        if output_vec is None:
-            self.output_vec = np.zeros([7*7])
-        else:
-            self.output_vec = output_vec
-
-    def __call__(self, input_vec = None):
-        if input_vec is None:
-            input_vec = self.input_vec
-
-        return move_convolution(input_vec, self.coeffs, self.joint_indices, self.mask, self.output_vec)
-
-    def grad(self, input_vec=None):
-        if input_vec is None:
-            input_vec = self.input_vec
-
-        return move_convolution(input_vec, self.coeffs, self.joint_indices, self.mask, self.output_vec)
+    def grad(self, input_vec, mask = None):
+        return move_convolution_grad(input_vec, self.coeff, self.joint_indices, mask, self.output_vec)
 
 class ConvolutionStage:
     '''
     A stage converting multiple channels to more multiple channels
     '''
-    def __init__(self, dim1, dim2, coeffs=None, output_vec=None, input_vec=None, mask=None):
+    def __init__(self, dim1, dim2):
         self.units = []
-        self.coeff_len = ConvolutionUnit().coeff_len # number of coefficients per conv unit
+        self.dim1 = dim1
+        self.dim2 = dim2
+        self.coeff_len = ConvolutionUnit().coeff_len * dim1 * dim2
         for d1 in range(dim1):
             self.units.append([])
             for d2 in range(dim2):
-                self.units[-1].append(ConvolutionUnit(
-                    coeffs[(d1*dim2 + d2)*self.coeff_len:(d1*dim2 + d2 + 1)*self.coeff_len],
-                    input_vec[d1*49:(d1+1)*49],
-                    output_vec[d2*49:(d2+1)*49],
-                    mask))
+                self.units[-1].append(ConvolutionUnit())
+        self.input_len = dim1 * self.units[0][0].input_len
+        self.output_len = dim2 * self.units[0][0].output_len
+        self.output_vec = np.zeros(self.output_len)
 
+    def set_coeff(self, coeff):
+        self.coeff = coeff
+        startind = 0
+        for ul in self.units:
+            for u in ul:
+                finalind = startind + u.coeff_len
+                u.set_coeff(coeff[startind:finalind])
+                startind = finalind
+
+    def get_coeff(self):
+        return self.coeff
+
+    def __call__(self, input_vec, mask = None):
+        self.input_vec = input_vec
+        self.output_vec[:] = 0
+        uolen = self.units[0][0].output_len
+        uilen = self.units[0][0].input_len
+        for d1, ul in enumerate(self.units):
+            for d2, u in enumerate(ul):
+                self.output_vec[d2*uolen: (d2+1)*uolen] += u(input_vec[d1*uilen:(d1+1)*uilen], mask)
+
+        return self.output_vec
 
 class ConvolutionNetwork:
     def __init__(self, dims):
-        self.unit_coeff_len = ConvolutionUnit().coeff_len  # number of coefficients per conv unit
-        self.total_coeff_len = 0
-        dim_pairs = []
-        for i in range(len(dims)-1):
-            this_dim_pair = [dims[i], dims[i+1]]
-            dim_pairs.append(this_dim_pair)
-            self.total_coeff_len += this_dim_pair[0]*this_dim_pair[1]*self.unit_coeff_len
+        self.coeff_len = 0
+        self.stages = []
 
         # spawn correct number of convolution units
+        for i in range(len(dims)-1):
+            self.stages.append(ConvolutionStage(dims[i], dims[i+1]))
 
-    def coeffs_len(self):
-        return 0 #number_of_coeffs
+        self.input_len = self.stages[0].input_len
+        self.output_len = self.stages[-1].output_len
 
-    def get_coeff_vector(self):
-        pass
+        self.coeff_len = 0
+        for s in self.stages:
+            self.coeff_len += s.coeff_len
 
-    def set_coeff_vector(self):
-        pass
+    def get_coeff(self):
+        return self.coeff
 
-    def __call__(self, input_vector):
-        # do convolution on all fronts
-        pass
+    def set_coeff(self, coeff):
+        self.coeff = coeff
+        # split it into bits and assign those to the units
+        startind = 0
+        for s in self.stages:
+            finalind = startind + s.coeff_len
+            s.set_coeff(coeff[startind:finalind])
+            startind = finalind
 
+    def __call__(self, input_vector, mask = None):
+        self.input_vector = input_vector
 
+        for s in self.stages:
+            input_vector = s(input_vector, mask)
+
+        return input_vector
 # so, the convolution network is my value function
-conv_network_instance = ConvolutionNetwork([2, 1])
 
 class NNValueFunction():
     def __init__(self,dims, coeffs):

@@ -709,7 +709,7 @@ class CustomPlayer:
             # TODO: better first move?
         info = {}
         info['depth'] = 0
-
+        bestmove  = (-1,-1)
         if not len(moves):
             return ((-1,-1), info)
 

@@ -62,7 +62,7 @@ same opponents.
 Agent = namedtuple("Agent", ["player", "name"])
 
 
-def play_match(player1, player2):
+def play_match(player1, player2, time_limit = TIME_LIMIT):
     """
     Play a "fair" set of matches between two agents by playing two games
     between the players, forcing each agent to play from randomly selected
@@ -83,7 +83,7 @@ def play_match(player1, player2):
     # play both games and tally the results
     for game in games:
         #print('another game:')
-        winner, _, termination = game.play(time_limit=TIME_LIMIT)
+        winner, _, termination = game.play(time_limit)
 
         if player1 == winner:
             num_wins[player1] += 1
@@ -108,7 +108,7 @@ def play_match(player1, player2):
     return num_wins[player1], num_wins[player2]
 
 
-def play_round(agents, num_matches):
+def play_round(agents, num_matches, time_limit = TIME_LIMIT):
     """
     Play one round (i.e., a single match between each pair of opponents)
     """
@@ -128,7 +128,7 @@ def play_round(agents, num_matches):
         # Each player takes a turn going first
         for p1, p2 in itertools.permutations((agent_1.player, agent_2.player)):
             for _ in range(num_matches):
-                score_1, score_2 = play_match(p1, p2)
+                score_1, score_2 = play_match(p1, p2, time_limit)
                 counts[p1] += score_1
                 counts[p2] += score_2
                 total += score_1 + score_2
@@ -141,7 +141,8 @@ def play_round(agents, num_matches):
     return 100. * wins / total
 
 
-def tournament(num_matches = None, time_limit = None, test_agents = None, opponents = None):
+def tournament(num_matches=NUM_MATCHES, time_limit=TIME_LIMIT, test_agents=None,
+               opponents=None):
 
     HEURISTICS = [("Null", null_score),
                   ("Open", open_move_score),
@@ -186,13 +187,6 @@ def tournament(num_matches = None, time_limit = None, test_agents = None, oppone
     if opponents is None:
         opponents = random_agents + mm_agents + ab_agents + improved_agent
 
-    if num_matches is None:
-        num_matches = NUM_MATCHES
-
-    if time_limit is None:
-        time_limit = TIME_LIMIT
-
-
     print(DESCRIPTION)
     for agentUT in test_agents:
         print("")
@@ -203,7 +197,7 @@ def tournament(num_matches = None, time_limit = None, test_agents = None, oppone
         agents = opponents + [agentUT]
                  #improved_agent + [
 
-        win_ratio = play_round(agents, num_matches)
+        win_ratio = play_round(agents, num_matches, time_limit)
 
         print("\n\nResults:")
         print("----------")

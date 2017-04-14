@@ -11,9 +11,9 @@ class Reporting(Borg):
 
 
 def get_depths(report, test_agents, func=lambda x: x['depth']):
+
     # get player names:
     players = []
-
     for game in report:
         for move in game['moves']:
             try:
@@ -30,8 +30,13 @@ def get_depths(report, test_agents, func=lambda x: x['depth']):
     for p in players:
         depths[p] = []
         for game in report:
+            winner = game['winner'] == p.player
             depths[p].append([])
             for move in game['moves']:
+                try:
+                    move['winner'] = winner
+                except:
+                    pass
                 try:
                     if move['active_player'] == p.player:
                         depths[p][-1].append(func(move))

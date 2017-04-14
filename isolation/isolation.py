@@ -333,6 +333,7 @@ class Board(object):
             move_end = time_left()
             try:
                 info['active_player'] = self._active_player
+                info['game'] =self.hash()
             except:
                 pass
             game_report['moves'].append(info)
@@ -343,6 +344,7 @@ class Board(object):
             if move_end < 0:
                 print('timeout!')
                 game_report['reason'] = 'timeout'
+                game_report['winner'] = self._inactive_player
                 reporter.report.append(game_report)
 
                 return self._inactive_player, move_history, "timeout"
@@ -351,10 +353,13 @@ class Board(object):
                 if len(legal_player_moves) > 0:
                     print('forfeit!')
                     game_report['reason'] = 'forfeit'
+                    game_report['winner'] = self._inactive_player
+
                     reporter.report.append(game_report)
 
                     return self._inactive_player, move_history, "forfeit"
                 game_report['reason'] = 'lost'
+                game_report['winner'] = self._inactive_player
                 reporter.report.append(game_report)
                 return self._inactive_player, move_history, "illegal move"
 

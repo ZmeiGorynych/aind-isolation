@@ -51,13 +51,14 @@ test_agents = [my_policy_x2_3, my_policy_x2_5, my_policy_x2_6, my_x1, my_x2 , my
 
 
 def par_tournament(agent):
-    result =tournament(num_matches = 400, test_agents = [agent])
+    result =tournament(num_matches = 25, test_agents = [agent])
     depths = get_depths(result, [agent], lambda x: (x['depth'], x['score']))
     return depths
 
 if __name__ == '__main__':
-    with Pool(7) as p:
-        result = p.map(par_tournament, test_agents)
+    for i in range(20):
+        with Pool(7) as p:
+            result = p.map(par_tournament, test_agents)
 
-        with open('result2.pickle', 'wb') as handle:
-            pickle.dump(result, handle)
+            with open('result' + str(i) + '.pickle', 'wb') as handle:
+                pickle.dump(result, handle)

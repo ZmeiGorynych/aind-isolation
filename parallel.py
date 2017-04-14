@@ -28,12 +28,15 @@ test_agents = [my_part_x2, my_x3]
 
 def par_tournament(agent):
     result =tournament(num_matches = 1, test_agents = [agent])
-    depths = get_depths(result, [agent], lambda x: (x['depth'], x['score']))
+    depths = get_depths(result, [agent], \
+        lambda x: {'depth':x['depth'], 'score': x['score'],
+                   'winner': x['winner'], 'game': x['game']})
     return depths
 
 if __name__ == '__main__':
     with Pool(2) as p:
         result = p.map(par_tournament, test_agents)
-
+        #result =[par_tournament(test_agents[0]), par_tournament(test_agents[1])]
         with open('result.pickle', 'wb') as handle:
+            print('saving results')
             pickle.dump(result, handle)

@@ -185,7 +185,7 @@ def tournament(num_matches=NUM_MATCHES, time_limit=TIME_LIMIT, test_agents=None,
                         ]
 
     if opponents is None:
-        opponents = random_agents + mm_agents + ab_agents + improved_agent
+        opponents = random_agents + mm_agents + ab_agents # + improved_agent
 
     print(DESCRIPTION)
     for agentUT in test_agents:

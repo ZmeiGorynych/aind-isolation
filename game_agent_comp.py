@@ -270,6 +270,7 @@ class CustomPlayerComp:
                 self.game_partitioned = False
 
         depth = 0
+        self.allscores = None
         try:
             if self.method == 'minimax':
                 func = self.minimax
@@ -286,11 +287,11 @@ class CustomPlayerComp:
                     #print(depth, self.time_left())
                     depth += 1
                     #if self.method=='minimax':
-                    score, bestmove = func(game,depth,maximizing_player=True)
+                    score, bestmove = func(game,depth,maximizing_player=True, top_level=True)
                     if score == float('inf') or score == float('-inf'): # found a strict win
                         break
             else:
-                score, bestmove = func(game, self.search_depth, maximizing_player=True)
+                score, bestmove = func(game, self.search_depth, maximizing_player=True, top_level=True)
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
@@ -303,12 +304,13 @@ class CustomPlayerComp:
             info['depth'] = self.search_depth
 
         info['score'] = score
+        info['allscores'] = self.allscores
 
         # Return the best move from the last completed search iteration
         return (bestmove, info)
         #raise NotImplementedError
 
-    def minimax(self, game, depth, maximizing_player=True):
+    def minimax(self, game, depth, maximizing_player=True, top_level = False):
         """Implement the minimax search algorithm as described in the lectures.
 
         Parameters
@@ -358,24 +360,31 @@ class CustomPlayerComp:
         # TODO: finish this function!
         # spawn a new board for each possible legal move
         scores = []
+        if top_level:
+            self.allscores = []
         for move in moves:
             thisgame = game.forecast_move(move)
             thisscore = self.minimax(thisgame, depth-1, not maximizing_player)
-            if (maximizing_player and thisscore[0] == float('inf')) or \
-                    (not maximizing_player and thisscore[0] == float('-inf')):
-                return (thisscore[0], move) # already won/lost
+            if top_level:
+                self.allscores.append((thisscore[0], move))
+            else:
+                if (maximizing_player and thisscore[0] == float('inf')) or \
+                        (not maximizing_player and thisscore[0] == float('-inf')):
+                    return (thisscore[0], move) # already won/lost
             scores.append((thisscore[0], move))
             if maximizing_player:
                 best_score = max(scores, key=lambda x: x[0])
             else:
                 best_score = min(scores, key=lambda x: x[0])
             scores = [best_score]
+        if top_level:
+            pass
 
         return best_score
 
 
 
-    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
+    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True, top_level =False):
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
 

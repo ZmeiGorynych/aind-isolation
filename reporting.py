@@ -1,3 +1,5 @@
+from value_functions import game_vector
+
 class Borg:
     _shared_state = {}
     def __init__(self):
@@ -37,11 +39,18 @@ def get_depths(report, test_agents, func=lambda x: x['depth']):
                     move['winner'] = winner
                 except:
                     pass
+
+                try:
+                    move['game'], move['pos'] = game_vector(move['game_'],p.player)
+                except:
+                    pass
+
                 try:
                     if move['active_player'] == p.player:
                         depths[p][-1].append(func(move))
                 except:
                     pass
+
         clean = []
         for game in depths[p]:
             if game:

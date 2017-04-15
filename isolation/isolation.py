@@ -333,7 +333,9 @@ class Board(object):
             move_end = time_left()
             try:
                 info['active_player'] = self._active_player
-                info['game'] =self.hash()
+                info['game_'] = game_copy
+                info['simple_score'] =self._active_player.score(game_copy,self._active_player)
+                info['move'] = curr_move
             except:
                 pass
             game_report['moves'].append(info)

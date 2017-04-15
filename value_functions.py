@@ -1,3 +1,4 @@
+import numpy as np
 def generate_all_moves():
     from sample_players import RandomPlayer
     from isolation import Board
@@ -13,6 +14,37 @@ def generate_all_moves():
         move_dict[move] = set(new_game.get_legal_moves(player1))
         #print(len(move_dict[move]))
     return move_dict
+
+
+def to_index(pair, board_size=7):
+    if pair is not None:
+        return pair[0] + board_size * pair[1]
+    else:
+        return None
+
+
+def to_pair(index, board_size=7):  # correct?
+    if index is not None:
+        return (index % board_size, int(index / board_size))
+    else:
+        return None
+
+def game_vector(game, player):
+    output = np.zeros(49)
+    moves = game.get_blank_spaces()
+    for move in moves:
+        output[to_index(move)] = 1
+
+    my_location = game.get_player_location(player)
+    opp_location = game.get_player_location(game.get_opponent(player))
+
+    my_loc = to_index(my_location)
+    opp_loc = to_index(opp_location)
+
+    return output, (my_loc,opp_loc)
+
+
+
 
 
 def partition(game, move_dict, my_pos, other_pos=None):

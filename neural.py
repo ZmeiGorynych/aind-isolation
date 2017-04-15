@@ -1,11 +1,7 @@
 import numpy as np
 from collections import namedtuple
 # define mapping from coeffs to
-def to_index(pair, board_size = 7):
-    return pair[0]+ board_size*pair[1]
-
-def to_pair(index, board_size = 7): # correct?
-    return (index%board_size, int(index/board_size))
+from value_functions import to_index, to_pair, game_vector
 
 def square_print(vec):
     for i in range(7):
@@ -128,51 +124,72 @@ def move_convolution(move_vec, coeff_vec, joint_indices,
                      mask = None, result_vector = np.array([0]*49)):
     for index, indlist in joint_indices.items():
         # first coeff is offset
-        result_vector[index] = coeff_vec[indlist[0][1]]
+        result_vector[index] = coeff_vec[indlist[0][1]] # offset
         # if some of the fields have to be 0 regardless, no point in computing them
-        if mask is None or mask[index] > 0:
+        if mask is None or mask[index]:
             for i in indlist[1:]:
                 result_vector[index] += move_vec[i[0]] * coeff_vec[i[1]]
 
     return result_vector
 
 
-def move_convolution_grad(move_vec, coeff_vec, joint_indices,
+def move_convolution_grad(move_vec, coeff_vec, joint_indices, type,
                           mask = None, result_grad = None):
-    if result_grad is None:
-        result_vector= np.zeros([len(move_vec), len(coeff_vec)])
+    if type == 'p':
+        if result_grad is None:
+            result_grad= np.zeros([len(coeff_vec),len(move_vec)])
 
-    for index, indlist in joint_indices:
-        if mask is None or mask[index] > 0:
-            for i in indlist:
-                result_grad[index, i[1]] = move_vec[i[0]]
+        for index, indlist in joint_indices.items():
+            if mask is None or mask[index] > 0:
+                result_grad[indlist[0][1], index] = 1 # offset
+                for i in indlist[1:]:
+                    result_grad[i[1], index] += move_vec[i[0]]
+
+    elif type == 'x':
+        if result_grad is None:
+            result_grad = np.zeros([len(move_vec), len(move_vec)])
+
+        for index, indlist in joint_indices.items():
+            if mask is None or mask[index] > 0:
+                for i in indlist[1:]: # first pair refers to the offset, so zero deriv wrt x
+                    result_grad[i[0], index] += coeff_vec[i[1]]
+    else:
+        raise ValueError('can\'t understand gradient type ' + type)
 
     return result_grad
 
 
 class ConvolutionUnit:
-    def __init__(self):
+    def __init__(self, relu = True):
 
         self.joint_indices, self.coeff_len = MoveConvolutionIndices()()
         self.input_len = 7*7
         self.output_len = 7*7
         self.output_vec = np.zeros(self.output_len)
+        self.relu = relu
 
     def set_coeff(self, coeff):
         self.coeff = coeff
 
     def __call__(self, input_vec, mask = None):
         self.input_vec = input_vec
-        return move_convolution(input_vec, self.coeff, self.joint_indices, mask, self.output_vec)
+        move_convolution(input_vec, self.coeff, self.joint_indices, mask, self.output_vec)
+        if self.relu:
+            self.output_vec[self.output_vec < 0] = 0
+        return self.output_vec
 
-    def grad(self, input_vec, mask = None):
-        return move_convolution_grad(input_vec, self.coeff, self.joint_indices, mask, self.output_vec)
+    def grad(self, type, mask = None):
+        if self.relu and mask is not None:
+            my_mask = mask * self.output_vec
+        else:
+            my_mask = mask
+        return move_convolution_grad(self.input_vec, self.coeff, self.joint_indices, type, my_mask)
 
 class ConvolutionStage:
     '''
     A stage converting multiple channels to more multiple channels
     '''
-    def __init__(self, dim1, dim2):
+    def __init__(self, dim1, dim2, relu = True):
         self.units = []
         self.dim1 = dim1
         self.dim2 = dim2
@@ -180,7 +197,7 @@ class ConvolutionStage:
         for d1 in range(dim1):
             self.units.append([])
             for d2 in range(dim2):
-                self.units[-1].append(ConvolutionUnit())
+                self.units[-1].append(ConvolutionUnit(relu))
         self.input_len = dim1 * self.units[0][0].input_len
         self.output_len = dim2 * self.units[0][0].output_len
         self.output_vec = np.zeros(self.output_len)
@@ -208,21 +225,67 @@ class ConvolutionStage:
 
         return self.output_vec
 
+    def grad(self, type, mask = None):
+        output = None
+        if type == 'p':
+            n = 0
+            for d1, ul in enumerate(self.units):
+                for d2, unit in enumerate(ul):
+                    part_grad = unit.grad(type, mask)
+                    len1, len2 = part_grad.shape
+                    if output is None:
+                        output = np.zeros([self.dim1 * self.dim2 * len1,
+                                           self.dim2 * len2])
+                    output[n*len1:(n+1)*len1, d2*len2:(d2+1)*len2] = part_grad
+                    n += 1
+            return output
+        elif type == 'x':
+            for d1, ul in enumerate(self.units):
+                for d2, unit in enumerate(ul):
+                    part_grad = unit.grad(type, mask)
+                    len1, len2 = part_grad.shape
+                    if output is None:
+                        output = np.zeros([self.dim1 * len1,
+                                           self.dim2 * len2])
+                    output[d1*len1:(d1+1)*len1, d2*len2:(d2+1)*len2] = part_grad
+
+            return output
+
 class ConvolutionNetwork:
-    def __init__(self, dims):
+    def __init__(self, dims, relu = True):
         self.coeff_len = 0
         self.stages = []
 
         # spawn correct number of convolution units
-        for i in range(len(dims)-1):
-            self.stages.append(ConvolutionStage(dims[i], dims[i+1]))
+        for i in range(len(dims)-2):
+            self.append_stage(ConvolutionStage(dims[i], dims[i+1], relu))
+        # no relu on the last stage
+        try:
+            self.append_stage(ConvolutionStage(dims[-2], dims[-1], False))
+        except:
+            pass
+
+    def append_stage(self, stage):
+        self.stages.append(stage)
 
         self.input_len = self.stages[0].input_len
         self.output_len = self.stages[-1].output_len
-
         self.coeff_len = 0
         for s in self.stages:
             self.coeff_len += s.coeff_len
+
+
+
+    def grad(self, mask=None): # gradient with respect to parameters only, for now
+        output = None
+        for s in self.stages:
+            new_grad = s.grad('p', mask)
+            if output is None:
+                output = new_grad
+            else:
+                output = np.concatenate((output.dot(s.grad('x', mask)), new_grad))
+        return output
+
 
     def get_coeff(self):
         return self.coeff
@@ -240,18 +303,71 @@ class ConvolutionNetwork:
         self.input_vector = input_vector
 
         for s in self.stages:
-            input_vector = s(input_vector, mask)
-
+            this_stage = s(input_vector, mask)
+            input_vector = this_stage
+        self.output_vector = input_vector
         return input_vector
 # so, the convolution network is my value function
+if False:
+    nn = ConvolutionNetwork([1, 1])
+    print(nn.coeff_len, nn.stages[0].units[0][0].coeff_len)
+    coeff = np.ones(nn.coeff_len)
+    inp = np.ones(nn.input_len)
+    nn.set_coeff(coeff)
+    nn(inp)
+    print(nn.grad())
+
+class SillySubtractionStage:
+    def __init__(self):
+        self.coeff_len = 2
+        self.input_len = 49
+        self.output_len = 1
+
+    def set_coeff(self, coeff):
+        self.coeff = coeff
+
+    def set_loc(self, me, opp):
+        self.me = me
+        self.opp = opp
+
+    def __call__(self, input_vec, mask):
+        self.input_vec = input_vec
+        return self.coeff[0]*input_vec[self.me] - self.coeff[1]*input_vec[self.opp]
+
+    def grad(self, type_, mask):
+        if type_ == 'x':
+            grad = np.zeros([self.input_vec.shape[0], 1])
+            grad[self.me,0] = self.coeff[0]
+            grad[self.opp,0] = -self.coeff[1]
+        elif type_ == 'p':
+            grad = np.zeros([2,1])
+            grad[0,0] = self.input_vec[self.me]
+            grad[1,0] = - self.input_vec[self.opp]
+        return grad
 
 class NNValueFunction():
-    def __init__(self,dims, coeffs):
-        self.nn = ConvolutionNetwork(dims)
-        self.nn.set_coeff_vector(coeffs)
+    def __init__(self,dims):
+        self.nn = ConvolutionNetwork(dims + [1])
+        self.nn.append_stage(SillySubtractionStage())
+        self.coeff_len = self.nn.coeff_len
 
-    def __call__(self, game, player):
-        pass
+    def set_coeff(self, coeff):
+        self.nn.set_coeff(coeff)
+
+    def __call__(self, game = None, player = None, input_vec = None, pos = None):
+        if input_vec is None:
+            input_vec, pos = game_vector(game,player)
+        self.nn.stages[-1].set_loc(pos[0],pos[1])
+        tmp = self.nn(input_vec, input_vec)
+        return tmp
+
+val = NNValueFunction([1, 3, 3])
+val.set_coeff(np.ones(val.coeff_len))
+val.nn.stages[-1].set_loc(23, 45)
+val.nn(np.ones(49))
+print(val.nn.output_len, val.nn.coeff_len)
+val.nn.grad().shape
+
 # in a while-loop later, now just one pass to make sure it works
 '''
 # first, run vanilla minimax with ID and 2x_exact heuristic against some opponents, 

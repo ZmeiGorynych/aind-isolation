@@ -2,10 +2,28 @@ import numpy as np
 from collections import namedtuple
 # define mapping from coeffs to
 from value_functions import to_index, to_pair, game_vector
+import copy
+
+def grad_(nn):
+    nn2 = copy.deepcopy(nn)
+    val = nn.output_vector
+    dx = 0.0001
+    grad_ = np.zeros([nn.coeff_len,nn.output_len])
+    coeff = nn2.get_coeff()
+    for i in range(len(coeff)):
+        tmp = coeff[i]
+        coeff[i]= coeff[i] + dx
+        nn2.set_coeff(coeff)
+        newval = nn2(nn2.input_vector)
+        grad_[i,:] = copy.copy(-(val - newval)/dx)
+        coeff[i] = tmp
+    return grad_
+
 
 def square_print(vec):
     for i in range(7):
         print(vec[i*7:(i+1)*7])
+
 
 def generate_all_moves_by_index():
     from sample_players import RandomPlayer
@@ -40,7 +58,6 @@ def rotate_index(ind, mat):
     point = np.array(pair) - 3
     r_point = (mat.dot(point) + 3.1).astype(int)
     return to_index(r_point)
-
 
 def correct_octile(index):
     pair = to_pair(index)
@@ -267,7 +284,9 @@ class ConvolutionNetwork:
 
     def append_stage(self, stage):
         self.stages.append(stage)
+        self.refresh()
 
+    def refresh(self):
         self.input_len = self.stages[0].input_len
         self.output_len = self.stages[-1].output_len
         self.coeff_len = 0
@@ -276,8 +295,9 @@ class ConvolutionNetwork:
 
 
 
-    def grad(self, mask=None): # gradient with respect to parameters only, for now
+    def grad(self): # gradient with respect to parameters only, for now
         output = None
+        mask = self.mask
         for s in self.stages:
             new_grad = s.grad('p', mask)
             if output is None:
@@ -301,6 +321,7 @@ class ConvolutionNetwork:
 
     def __call__(self, input_vector, mask = None):
         self.input_vector = input_vector
+        self.mask = mask
 
         for s in self.stages:
             this_stage = s(input_vector, mask)
@@ -345,6 +366,70 @@ class SillySubtractionStage:
             grad[1,0] = - self.input_vec[self.opp]
         return grad
 
+class SelectionStage: #TODO: add softmax
+    def __init__(self):
+        self.coeff_len = 0
+        self.input_len = 49
+        self.output_len = 0
+
+    def set_coeff(self, coeff):
+        pass
+
+    def set_indices(self, indices):
+        self.indices = indices
+        self.output_len=len(indices)
+
+
+    def __call__(self, input_vec, mask):
+        self.input_vec = input_vec
+        return input_vec[self.indices]
+
+    def grad(self, type_, mask):
+        if type_ == 'x':
+            grad = np.zeros([self.input_vec.shape[0], len(self.indices)])
+            for i, ind in enumerate(self.indices):
+                grad[ind, i] = 1
+        elif type_ == 'p':
+            grad = np.zeros([0, len(self.indices)])
+        return grad
+
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+
+class SoftmaxSelectionStage: #TODO: add softmax
+    def __init__(self):
+        self.coeff_len = 0
+        self.input_len = 49
+        self.output_len = 0
+
+    def set_coeff(self, coeff):
+        pass
+
+    def set_indices(self, indices):
+        self.indices = indices
+        self.output_len=len(indices)
+
+    def __call__(self, input_vec, mask):
+        self.input_vec = input_vec
+        self.output_vec = softmax(input_vec[self.indices])
+        return self.output_vec
+
+    def grad(self, type_, mask):
+        if type_ == 'x':
+            val = self.output_vec
+            grad = np.zeros([self.input_vec.shape[0], len(self.indices)])
+            for i, ind in enumerate(self.indices):
+                for j in range(len(self.indices)):
+                    if i == j:
+                        grad[ind, j] = val[i]*(1-val[i])
+                    else:
+                        grad[ind, j] = - val[i]*val[j]
+        elif type_ == 'p':
+            grad = np.zeros([0, len(self.indices)])
+        return grad
+
 class NNValueFunction():
     def __init__(self,dims):
         self.nn = ConvolutionNetwork(dims + [1])
@@ -361,12 +446,37 @@ class NNValueFunction():
         tmp = self.nn(input_vec, input_vec)
         return tmp
 
-val = NNValueFunction([1, 3, 3])
+class SelectionValueFunction():
+    def __init__(self,dims):
+        self.nn = ConvolutionNetwork([3] + dims + [1])
+        self.nn.append_stage(SoftmaxSelectionStage())
+        self.coeff_len = self.nn.coeff_len
+        self.dummy = np.zeros(3*49)
+
+    def set_coeff(self, coeff):
+        self.nn.set_coeff(coeff)
+
+    def __call__(self, input_vec = None, pos = None, indices = None, mask = None):
+        self.nn.stages[-1].set_indices(indices)
+        self.nn.refresh()
+        # one-hot encode my and opponent position
+        self.dummy[:49] = input_vec
+        self.dummy[49:] = 0
+        self.dummy[49 + pos[0]] = 1
+        self.dummy[2*49 + pos[1]] = 1
+        tmp = self.nn(self.dummy, mask)
+        return tmp
+
+
+val = SelectionValueFunction([1])
 val.set_coeff(np.ones(val.coeff_len))
-val.nn.stages[-1].set_loc(23, 45)
-val.nn(np.ones(49))
+val.nn.stages[-1].set_indices([23, 45])
+val.nn.refresh()
+val.nn(np.ones(3*49), np.ones(49))
 print(val.nn.output_len, val.nn.coeff_len)
-val.nn.grad().shape
+print(val.nn.grad().shape)
+delta = grad_(val.nn) -val.nn.grad()
+print(delta.max(), delta.min())
 
 # in a while-loop later, now just one pass to make sure it works
 '''

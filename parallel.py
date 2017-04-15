@@ -48,22 +48,22 @@ my_policy_x2_6 = Agent(CustomPlayerComp(score_fn=improved_score_fast_x2,
 
 #test_agents = [my_policy_x2]#my_null,my_x1, my_x2 , my_x3, my_part_x2]
 
-test_agents = [my_x1, my_x2 , my_x3,my_x1, my_x2 , my_x3, my_x2]#,my_policy_x2_3] #]#, my_policy_x2_5, my_policy_x2_6, , my_part_x2
+#test_agents = [my_x1, my_x2 , my_x3,my_x1, my_x2 , my_x3]#,my_policy_x2_3] #]#, my_policy_x2_5, my_policy_x2_6, , my_part_x2
 
-
+test_agents = [my_x3,my_x3]
 def par_tournament(agent):
-    result =tournament(num_matches = 100, test_agents = [agent], time_limit=float('inf'))
+    result =tournament(num_matches = 10, test_agents = [agent], time_limit=float('inf'))
     depths = get_depths(result, [agent], lambda x: {'depth':x['depth'],'score': x['score'],
             'game': x['game'],'pos': x['pos'], 'simple_score':x['simple_score'],
             'move': x['move'], 'allscores': x['allscores']})
     return depths
 
 if __name__ == '__main__':
-    for i in range(10):
-        with Pool(7) as p:
+    for i in range(1,100):
+        with Pool(6) as p:
             result = p.map(par_tournament, test_agents)
             #result = []
             #for agent in test_agents:
             #    result.append(par_tournament(agent))
-            with open('result' + str(i) + '.pickle', 'wb') as handle:
+            with open('result_a' + str(i) + '.pickle', 'wb') as handle:
                 pickle.dump(result, handle)

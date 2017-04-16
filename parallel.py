@@ -52,7 +52,7 @@ if False:
 
 test_agents = [my_x2,my_x2,my_x2,my_x2]
 def par_tournament(agent):
-    result =tournament(num_matches = 1, test_agents = [agent], time_limit=1000)
+    result =tournament(num_matches = 10, test_agents = [agent], time_limit=1000)
     depths = get_depths(result, [agent], lambda x: {'depth':x['depth'],'score': x['score'],
             'game': x['game'],'pos': x['pos'], 'simple_score':x['simple_score'],
             'move': x['move'], 'allscores': x['allscores']})
@@ -60,7 +60,7 @@ def par_tournament(agent):
 
 if __name__ == '__main__':
     for i in range(1,100):
-        with Pool(1) as p:
+        with Pool(4) as p:
             result = p.map(par_tournament, test_agents)
             #result = []
             #for agent in test_agents:

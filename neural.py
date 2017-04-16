@@ -1,22 +1,32 @@
 import numpy as np
 from collections import namedtuple
 # define mapping from coeffs to
-from value_functions import to_index, to_pair, game_vector
+from value_functions import to_index, to_pair, game_vector, softmax
 import copy
 
-def grad_(nn):
+def grad_(nn, type_='p'):
     nn2 = copy.deepcopy(nn)
     val = nn.output_vector
     dx = 0.0001
-    grad_ = np.zeros([nn.coeff_len,nn.output_len])
-    coeff = nn2.get_coeff()
-    for i in range(len(coeff)):
-        tmp = coeff[i]
-        coeff[i]= coeff[i] + dx
-        nn2.set_coeff(coeff)
-        newval = nn2(nn2.input_vector)
-        grad_[i,:] = copy.copy(-(val - newval)/dx)
-        coeff[i] = tmp
+    if type_ == 'p':
+        grad_ = np.zeros([nn.coeff_len,nn.output_len])
+        coeff = nn2.get_coeff()
+        for i in range(len(coeff)):
+            tmp = coeff[i]
+            coeff[i]= coeff[i] + dx
+            nn2.set_coeff(coeff)
+            newval = nn2(nn2.input_vector)
+            grad_[i,:] = copy.copy(-(val - newval)/dx)
+            coeff[i] = tmp
+    elif type_ =='x':
+        grad_ = np.zeros([nn.input_len,nn.output_len])
+        inp = nn2.input_vector
+        for i in range(len(inp)):
+            tmp = inp[i]
+            inp[i]= inp[i] + dx
+            newval = nn2(inp)
+            grad_[i,:] = copy.copy(-(val - newval)/dx)
+            inp[i] = tmp
     return grad_
 
 
@@ -393,10 +403,7 @@ class SelectionStage: #TODO: add softmax
             grad = np.zeros([0, len(self.indices)])
         return grad
 
-def softmax(x):
-    """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
+
 
 class SoftmaxSelectionStage: #TODO: add softmax
     def __init__(self):
@@ -430,6 +437,32 @@ class SoftmaxSelectionStage: #TODO: add softmax
             grad = np.zeros([0, len(self.indices)])
         return grad
 
+class SingleOutputStage: #TODO: add softmax
+    def __init__(self):
+        self.coeff_len = 49
+        self.input_len = 49
+        self.output_len = 1
+
+    def set_coeff(self, coeff):
+        self.coeff = coeff
+
+    def __call__(self, input_vec, mask):
+        self.input_vec = input_vec
+        self.output_vec = np.array(sum([self.coeff[i]*inp for i, inp in enumerate(self.input_vec)]))
+        return self.output_vec
+
+    def grad(self, type_, mask):
+        grad = np.zeros([self.coeff_len, self.output_len])
+        if type_ == 'x':
+            grad = np.zeros([self.coeff_len, self.output_len])
+            for i in range(self.coeff_len):
+                grad[i][0] = self.coeff[i]
+        elif type_ == 'p':
+            grad = np.zeros([self.coeff_len, self.output_len])
+            for i in range(self.coeff_len):
+                grad[i][0] = self.input_vec[i]
+        return grad
+
 class NNValueFunction():
     def __init__(self,dims):
         self.nn = ConvolutionNetwork(dims + [1])
@@ -448,7 +481,8 @@ class NNValueFunction():
 
 class SelectionValueFunction():
     def __init__(self,dims):
-        self.nn = ConvolutionNetwork([3] + dims + [1])
+        self.dims = [3] + dims + [1]
+        self.nn = ConvolutionNetwork(self.dims)
         self.nn.append_stage(SoftmaxSelectionStage())
         self.coeff_len = self.nn.coeff_len
         self.dummy = np.zeros(3*49)
@@ -467,6 +501,25 @@ class SelectionValueFunction():
         tmp = self.nn(self.dummy, mask)
         return tmp
 
+class SingleValueFunction():
+    def __init__(self,dims):
+        self.dims = [3] + dims + [1]
+        self.nn = ConvolutionNetwork(self.dims)
+        self.nn.append_stage(SingleOutputStage())
+        self.coeff_len = self.nn.coeff_len
+        self.dummy = np.zeros(3*49)
+
+    def set_coeff(self, coeff):
+        self.nn.set_coeff(coeff)
+
+    def __call__(self, input_vec = None, pos = None, mask = None):
+        # one-hot encode my and opponent position
+        self.dummy[:49] = input_vec
+        self.dummy[49:] = 0
+        self.dummy[49 + pos[0]] = 1
+        self.dummy[2*49 + pos[1]] = 1
+        tmp = self.nn(self.dummy, mask)
+        return tmp
 
 val = SelectionValueFunction([1])
 val.set_coeff(np.ones(val.coeff_len))

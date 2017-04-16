@@ -8,14 +8,22 @@ from value_functions import improved_score_fast_x2,improved_score_fast,\
 from sample_players import null_score
 from policy import SimplePolicy
 import numpy as np
+from neural import NNValueFunction, SelectionValueFunction, SingleValueFunction
+import numpy as np
+from copy import copy
+from sklearn.model_selection import train_test_split
+import math
+import random
 
 import pickle, glob
 
-def run_calibration(s, train_final_scores = False ):
+def run_calibration(s, train_final_scores = True, file_pattern = 'data/result*.pickle' ):
+    if train_final_scores:
+        file_pattern = 'data/result_ID*.pickle'
     #train_final_scores = False
     #s = 1
 
-    files = glob.glob('data/result*.pickle')
+    files = glob.glob(file_pattern)
     print(files)
 
     depths = {}
@@ -39,48 +47,49 @@ def run_calibration(s, train_final_scores = False ):
     #    pickle.dump(depths, handle)
     print(depths.keys())
 
-    example = depths['improved, three steps exact'][0]
-    move = example[1]
-    print(move['allscores'])
+    if not train_final_scores:
+        example = depths['improved, two steps exact, with reporting'][0]
+        move = example[1]
+        print(move['allscores'])
+        print(nice_allscores(move['allscores']))
 
-    print(nice_allscores(move['allscores']))
-
-    moves = []
-    final_moves = []
     # for player, games in depths.items():
-    games = depths['improved, three steps exact']
-    for game in games:
-        for m, move in enumerate(game):
-            if move['score'] != float('inf') and move['score'] != float('-inf'):
-                moves.append(move)
-            else:
-                from copy import copy
-                move_ = copy(move)
-                if move['score'] == float('inf'):
-                    move_['score'] = 1
+    games = depths['improved, two steps exact, with reporting']
+    games_train, games_test = train_test_split(games, test_size=0.1)
+
+    def extract_moves(games):
+        moves = []
+        final_moves = []
+        for game in games:
+            for m, move in enumerate(game):
+                if move['score'] != float('inf') and move['score'] != float('-inf'):
+                    moves.append(move)
                 else:
-                    move_['score'] = -1
-                final_moves.append(move_)
+                    from copy import copy
+                    move_ = copy(move)
+                    if move['score'] == float('inf'):
+                        move_['score'] = 1
+                    else:
+                        move_['score'] = -1
+                    final_moves.append(move_)
+        return moves, final_moves
+    moves_train, final_moves_train = extract_moves(games_train)
+    moves_test, final_moves_test = extract_moves(games_test)
 
     depths = {}
 
-    print(len(moves), len(final_moves))
-    print(nice_allscores(moves[0]['allscores']))
+    print(len(moves_train), len(final_moves_train))
+    #print(nice_allscores(moves_train[0]['allscores']))
 
-    from neural import NNValueFunction, SelectionValueFunction, SingleValueFunction
-    import numpy as np
-    from copy import copy
-    from sklearn.model_selection import train_test_split
-    import math
-    import random
+
 
 
     if train_final_scores:
-        train_moves, test_moves = train_test_split(final_moves, test_size=0.1)
+        train_moves, test_moves = final_moves_train, final_moves_test
         sizes = [[5], [2, 2, 2], [5, 5], [8, 8]]
         val = SingleValueFunction(sizes[s])
     else:
-        train_moves, test_moves = train_test_split(moves, test_size=0.1)
+        train_moves, test_moves = moves_train, moves_test
         sizes = [[5], [2, 2, 2], [5, 5, 5, 5, 5], [8, 8, 8, 8]]
         val = SelectionValueFunction(sizes[s])
 
@@ -163,5 +172,10 @@ def run_calibration(s, train_final_scores = False ):
         print('train: ', trainerr[-1])
         print('test: ', testerr[-1])
         epoch += 1
-        with open('data/calibrated_' + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
+        if train_final_scores:
+            mystr = '_final_'
+        else:
+            mystr = ''
+
+        with open('data/calibrated_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
             pickle.dump({'function': val, 'trainerr' : trainerr, 'testerr': testerr}, handle)

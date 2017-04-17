@@ -445,24 +445,26 @@ class CustomPlayerComp:
 
         # spawn a new board for each possible legal move
         scores = []
-        if self.policy is None:
-            for move in moves:
-                thisgame = game.forecast_move(move)
-                thisscore = self.alphabeta(thisgame, depth-1, alpha, beta, not maximizing_player)
-                scores.append((thisscore[0], move))
-                if maximizing_player:
-                    best_score = max(scores, key=lambda x: x[0])
-                    if best_score[0] >= beta:
-                        return best_score
-                    alpha = max(alpha, best_score[0])
-                else:
-                    best_score = min(scores, key=lambda x: x[0])
-                    if best_score[0] <= alpha:
-                        return best_score
-                    beta = min(beta, best_score[0])
+        if self.policy is not None and self.policy.max_moves < len(moves):
+            moves = self.policy(game,self, maximizing_player, moves)
 
-                scores = [best_score]
-        else:
+        for move in moves:
+            thisgame = game.forecast_move(move)
+            thisscore = self.alphabeta(thisgame, depth-1, alpha, beta, not maximizing_player)
+            scores.append((thisscore[0], move))
+            if maximizing_player:
+                best_score = max(scores, key=lambda x: x[0])
+                if best_score[0] >= beta:
+                    return best_score
+                alpha = max(alpha, best_score[0])
+            else:
+                best_score = min(scores, key=lambda x: x[0])
+                if best_score[0] <= alpha:
+                    return best_score
+                beta = min(beta, best_score[0])
+
+            scores = [best_score]
+        if False:
             potential_moves = []
             for move in moves:
                 potential_moves.append((move,game.forecast_move(move)))

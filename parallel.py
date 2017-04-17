@@ -4,8 +4,11 @@ from multiprocessing import Pool
 import importlib
 from collections import namedtuple
 from game_agent_comp import CustomPlayerComp
+from game_agent import CustomPlayer
 from value_functions import improved_score_fast_x2,improved_score_fast,\
     improved_score_fast_x3, partition_score_x2
+from sample_players import improved_score
+
 from sample_players import null_score
 from policy import SimplePolicy
 import pickle
@@ -26,7 +29,10 @@ my_x1 = Agent(CustomPlayerComp(score_fn=improved_score_fast, **CUSTOM_ARGS),
       "Faster improved")                        
 
 my_x2 = Agent(CustomPlayerComp(score_fn=improved_score_fast_x2,**CUSTOM_ARGS), 
-                  "improved, two steps exact, with reporting")
+                  "improved, two steps exact")
+
+improved_agent = [Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")]
+
 if False:
     my_null = Agent(CustomPlayerComp(score_fn=null_score,method = 'minimax', iterative = True),
                            "Null score minimax ID")
@@ -50,9 +56,11 @@ if False:
 
     #test_agents = [my_x1, my_x2 , my_x3,my_x1, my_x2 , my_x3]#,my_policy_x2_3] #]#, my_policy_x2_5, my_policy_x2_6, , my_part_x2
 
-test_agents = [my_x2,my_x2,my_x2,my_x2]
+test_agents = [my_x2,my_x2,my_x2,my_x2, my_x2, my_x2,my_x2,my_x2]
+
 def par_tournament(agent):
-    result =tournament(num_matches = 10, test_agents = [agent], time_limit=1000)
+    result =tournament(num_matches = 100, test_agents = [agent], time_limit=1000
+                       ,opponents=[improved_agent])
     depths = get_depths(result, [agent], lambda x: {'depth':x['depth'],'score': x['score'],
             'game': x['game'],'pos': x['pos'], 'simple_score':x['simple_score'],
             'move': x['move'], 'allscores': x['allscores']})
@@ -60,7 +68,7 @@ def par_tournament(agent):
 
 if __name__ == '__main__':
     for i in range(1,100):
-        with Pool(4) as p:
+        with Pool(8) as p:
             result = p.map(par_tournament, test_agents)
             #result = []
             #for agent in test_agents:

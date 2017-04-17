@@ -490,7 +490,12 @@ class SelectionValueFunction():
     def set_coeff(self, coeff):
         self.nn.set_coeff(coeff)
 
-    def __call__(self, input_vec = None, pos = None, indices = None, mask = None):
+    def __call__(self, game, player, legal_moves):
+        game_vec, pos = game_vector(game,player)
+        indices = [to_index(move) for move in legal_moves]
+        return zip(self.eval(input_vec=game_vec, pos=pos,indices=indices,mask=game_vec), indices)
+
+    def eval(self, input_vec = None, pos = None, indices = None, mask = None):
         self.nn.stages[-1].set_indices(indices)
         self.nn.refresh()
         # one-hot encode my and opponent position

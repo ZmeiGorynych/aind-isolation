@@ -8,7 +8,7 @@ def generate_all_moves():
     player2 = RandomPlayer()
     game = Board(player1, player2)
     all_moves = game.get_legal_moves(player1)
-    print(len(all_moves))
+    #print(len(all_moves))
     for move in all_moves:
         new_game = game.forecast_move(move)
         move_dict[move] = set(new_game.get_legal_moves(player1))

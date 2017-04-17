@@ -31,7 +31,7 @@ my_x1 = Agent(CustomPlayerComp(score_fn=improved_score_fast, **CUSTOM_ARGS),
 my_x2 = Agent(CustomPlayerComp(score_fn=improved_score_fast_x2,**CUSTOM_ARGS), 
                   "improved, two steps exact")
 
-improved_agent = [Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")]
+improved_agent = Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved")
 
 if False:
     my_null = Agent(CustomPlayerComp(score_fn=null_score,method = 'minimax', iterative = True),
@@ -69,9 +69,11 @@ def par_tournament(agent):
 if __name__ == '__main__':
     for i in range(1,100):
         with Pool(8) as p:
-            result = p.map(par_tournament, test_agents)
-            #result = []
-            #for agent in test_agents:
-            #    result.append(par_tournament(agent))
+            if True:
+                result = p.map(par_tournament, test_agents)
+            else:
+                result = []
+                for agent in test_agents:
+                    result.append(par_tournament(agent))
             with open('data/result_ID_x2_' + str(i) + '.pickle', 'wb') as handle:
                 pickle.dump(result, handle)

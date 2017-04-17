@@ -13,23 +13,6 @@ class Timeout(Exception):
     """Subclass base exception for code clarity."""
     pass
 
-def generate_all_moves():
-    from sample_players import RandomPlayer
-    from isolation import Board
-
-    move_dict = {}
-    player1 = RandomPlayer()
-    player2 = RandomPlayer()
-    game = Board(player1, player2)
-    all_moves = game.get_legal_moves(player1)
-    print(len(all_moves))
-    for move in all_moves:
-        new_game = game.forecast_move(move)
-        move_dict[move] = set(new_game.get_legal_moves(player1))
-        #print(len(move_dict[move]))
-    return move_dict
-
-
 def partition(game, move_dict, my_pos, other_pos=None):
     this_component_size = 1
     prev_nodes = {}
@@ -223,7 +206,6 @@ def generate_all_moves():
     player2 = RandomPlayer()
     game = Board(player1, player2)
     all_moves = game.get_legal_moves(player1)
-    print(len(all_moves))
     for move in all_moves:
         new_game = game.forecast_move(move)
         move_dict[move] = set(new_game.get_legal_moves(player1))

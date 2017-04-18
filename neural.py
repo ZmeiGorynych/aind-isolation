@@ -525,16 +525,16 @@ class SingleValueFunction():
         self.dummy[2*49 + pos[1]] = 1
         tmp = self.nn(self.dummy, mask)
         return tmp
-
-val = SelectionValueFunction([1])
-val.set_coeff(np.ones(val.coeff_len))
-val.nn.stages[-1].set_indices([23, 45])
-val.nn.refresh()
-val.nn(np.ones(3*49), np.ones(49))
-print(val.nn.output_len, val.nn.coeff_len)
-print(val.nn.grad().shape)
-delta = grad_(val.nn) -val.nn.grad()
-print(delta.max(), delta.min())
+if False: #TODO: remove this section!
+    val = SelectionValueFunction([1])
+    val.set_coeff(np.ones(val.coeff_len))
+    val.nn.stages[-1].set_indices([23, 45])
+    val.nn.refresh()
+    val.nn(np.ones(3*49), np.ones(49))
+    print(val.nn.output_len, val.nn.coeff_len)
+    print(val.nn.grad().shape)
+    delta = grad_(val.nn) -val.nn.grad()
+    print(delta.max(), delta.min())
 
 # in a while-loop later, now just one pass to make sure it works
 '''

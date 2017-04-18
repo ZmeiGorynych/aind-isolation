@@ -4,7 +4,7 @@ import importlib
 from collections import namedtuple
 from game_agent_comp import CustomPlayerComp
 from value_functions import improved_score_fast_x2,improved_score_fast,\
-    improved_score_fast_x3, partition_score_x2, nice_allscores
+    improved_score_fast_x3, partition_score_x2, softmax, to_index
 from sample_players import null_score
 from policy import SimplePolicy
 import numpy as np
@@ -17,6 +17,15 @@ import random
 
 import pickle, glob
 
+def nice_allscores(x, use_softmax = False):
+    scores = [score for score, cell in x]
+    inds = [to_index(cell) for score, cell in x]
+    if use_softmax:
+        return softmax(scores), inds
+    else:
+        max_score = max(scores)
+        new_scores = np.array([1 if score == max_score else 0 for score in scores ])
+        return new_scores, inds
 
 def get_simulation_data(files):
     depths = {}
@@ -45,12 +54,12 @@ def run_batch(moves, val, train_final_scores):
     dcoeff = np.zeros(val.coeff_len)
     for m, move in enumerate(moves):
         if train_final_scores:
-            thisvalue = val(input_vec=move['game'], pos=move['pos'], mask=move['game'])
+            thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], mask=move['game'])
             diff = move['score'] - thisvalue
             train_base[m] = move['score']
         else:
             scores, inds = nice_allscores(move['allscores'])
-            thisvalue = val(input_vec=move['game'], pos=move['pos'], indices=inds, mask=move['game'])
+            thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], indices=inds, mask=move['game'])
             diff = scores - thisvalue
             train_base[m] = np.linalg.norm(scores - scores.mean())
         train_diff[m] = np.linalg.norm(diff)
@@ -81,9 +90,14 @@ def extract_moves(games):
                 final_moves.append(move_)
     return moves, final_moves
 
-def run_calibration(s = 0, train_final_scores = True, file_pattern = 'data/result*.pickle' ):
-    if train_final_scores:
-        file_pattern = 'data/result_ID*.pickle'
+def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
+    if file_pattern is None:
+        if train_final_scores:
+            file_pattern = 'data/result_ID*.pickle'
+            keyname = 'improved, two steps exact'
+        else:
+            file_pattern = 'data/result?.pickle'
+            keyname = 'improved, two steps exact, with reporting'
 
     files = glob.glob(file_pattern)
     print(files)
@@ -91,13 +105,13 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = 'data/resul
     print(depths.keys())
 
     if not train_final_scores:
-        example = depths['improved, two steps exact'][0]
+        example = depths[keyname][0]
         move = example[1]
         print(move['allscores'])
         print(nice_allscores(move['allscores']))
 
     # for player, games in depths.items():
-    games = depths['improved, two steps exact']
+    games = depths[keyname]
     games_train, games_test = train_test_split(games, test_size=0.1)
 
 
@@ -112,7 +126,7 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = 'data/resul
         val = SingleValueFunction(sizes[s])
     else:
         train_moves, test_moves = moves_train, moves_test
-        sizes = [[5], [2, 2, 2], [5, 5, 5, 5, 5], [8, 8, 8, 8]]
+        sizes = [[2, 2, 2], [2,2,2,2], [2,2,2,2,2], [3,3,3]]
         val = SelectionValueFunction(sizes[s])
 
     coeff = np.random.normal(size=val.coeff_len) * 0.1
@@ -155,22 +169,22 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = 'data/resul
             random.shuffle(test_moves)
             for m, move in enumerate(test_moves[:batch_size]): # TODO: factor this code into run_batch
                 if train_final_scores:
-                    thisvalue = val(input_vec=move['game'], pos=move['pos'], mask=move['game'])
+                    thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], mask=move['game'])
                     diff = move['score'] - thisvalue
                     test_base[m] = move['score']
                 else:
                     scores, inds = nice_allscores(move['allscores'])
-                    thisvalue = val(input_vec=move['game'], pos=move['pos'], indices=inds, mask=move['game'])
+                    thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], indices=inds, mask=move['game'])
                     diff = scores - thisvalue
                     test_base[m] = np.linalg.norm(scores - scores.mean())
 
                 test_diff[m] = np.linalg.norm(diff)
 
-            #print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
+            print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
             trainerr.append(1 - (np.linalg.norm(train_diff) / np.linalg.norm(train_base)) ** 2)
             testerr.append(1 - (np.linalg.norm(test_diff) / np.linalg.norm(test_base)) ** 2)
-            #print('train: ', trainerr[-1])
-            #print('test: ', testerr[-1])
+            print('train: ', trainerr[-1])
+            print('test: ', testerr[-1])
         epoch += 1
         if train_final_scores:
             mystr = 'final_'

@@ -484,6 +484,7 @@ class SelectionValueFunction():
         self.dims = [3] + dims + [1]
         self.nn = ConvolutionNetwork(self.dims)
         self.nn.append_stage(SoftmaxSelectionStage())
+        #self.nn.append_stage(SelectionStage())
         self.coeff_len = self.nn.coeff_len
         self.dummy = np.zeros(3*49)
 

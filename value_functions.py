@@ -20,10 +20,7 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
-def nice_allscores(x):
-    scores = [score for score, cell in x]
-    inds = [to_index(cell) for score, cell in x]
-    return softmax(scores), inds
+
 
 def to_index(pair, board_size=7):
     if pair is not None:

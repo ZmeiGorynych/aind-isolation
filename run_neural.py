@@ -180,11 +180,11 @@ def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
 
                 test_diff[m] = np.linalg.norm(diff)
 
-            print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
+            #print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
             trainerr.append(1 - (np.linalg.norm(train_diff) / np.linalg.norm(train_base)) ** 2)
             testerr.append(1 - (np.linalg.norm(test_diff) / np.linalg.norm(test_base)) ** 2)
-            print('train: ', trainerr[-1])
-            print('test: ', testerr[-1])
+            #print('train: ', trainerr[-1])
+            #print('test: ', testerr[-1])
         epoch += 1
         if train_final_scores:
             mystr = 'final_'

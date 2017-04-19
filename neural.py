@@ -518,7 +518,7 @@ class SingleValueFunction():
     def set_coeff(self, coeff):
         self.nn.set_coeff(coeff)
 
-    def __call__(self, input_vec = None, pos = None, mask = None):
+    def eval(self, input_vec = None, pos = None, mask = None):
         # one-hot encode my and opponent position
         self.dummy[:49] = input_vec
         self.dummy[49:] = 0
@@ -526,6 +526,9 @@ class SingleValueFunction():
         self.dummy[2*49 + pos[1]] = 1
         tmp = self.nn(self.dummy, mask)
         return tmp
+
+    def __call__(self): # TODO  will implement later
+        pass
 if False: #TODO: remove this section!
     val = SelectionValueFunction([1])
     val.set_coeff(np.ones(val.coeff_len))

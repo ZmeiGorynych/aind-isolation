@@ -55,17 +55,18 @@ def run_batch(moves, val, train_final_scores):
     for m, move in enumerate(moves):
         if train_final_scores:
             thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], mask=move['game'])
-            diff = move['score'] - thisvalue
+            diff = np.array([move['score'] - thisvalue])
             train_base[m] = move['score']
+            train_diff[m] = math.fabs(diff[0])
         else:
             scores, inds = nice_allscores(move['allscores'])
             thisvalue = val.eval(input_vec=move['game'], pos=move['pos'], indices=inds, mask=move['game'])
             diff = scores - thisvalue
             train_base[m] = np.linalg.norm(scores - scores.mean())
-        train_diff[m] = np.linalg.norm(diff)
+            train_diff[m] = np.linalg.norm(diff)
         difflist.append(diff)
         gr = val.nn.grad()
-        delta = gr.dot(diff).transpose() * 0.01
+        delta = gr.dot(diff).transpose()
         # print(diff,dcoeff,delta)
         try:
             dcoeff += delta
@@ -90,16 +91,16 @@ def extract_moves(games):
                 final_moves.append(move_)
     return moves, final_moves
 
-def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
+def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
     if file_pattern is None:
         if train_final_scores:
-            file_pattern = 'data/result_ID*.pickle'
+            file_pattern = 'data/ID_x2_1000ms/result_ID*.pickle'
             keyname = 'improved, two steps exact'
         else:
             file_pattern = 'data/result?.pickle'
             keyname = 'improved, two steps exact, with reporting'
 
-    files = glob.glob(file_pattern)
+    files = glob.glob(file_pattern)[:1]
     print(files)
     depths = get_simulation_data(files)
     print(depths.keys())
@@ -124,12 +125,16 @@ def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
         train_moves, test_moves = final_moves_train, final_moves_test
         sizes = [[2, 2, 2], [2,2,2,2], [3,3,3]]
         val = SingleValueFunction(sizes[s])
+        coeff = np.random.normal(size=val.coeff_len) * 0.5
+        grad_mult = 0.0001
     else:
         train_moves, test_moves = moves_train, moves_test
         sizes = [[2, 2, 2], [2,2,2,2], [2,2,2,2,2], [3,3,3]]
         val = SelectionValueFunction(sizes[s])
+        coeff = np.random.normal(size=val.coeff_len) * 0.1
+        grad_mult = 0.01
 
-    coeff = np.random.normal(size=val.coeff_len) * 0.1
+
     n = 0
     while 53 * n < len(coeff):
         coeff[53 * n:(53 * n + 10)] = 0
@@ -160,9 +165,9 @@ def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
             # cnorm = np.linalg.norm(val.nn.get_coeff())
             # dcoeff = math.sqrt(cnorm/dnorm)*dcoeff
             # if m%50 == 0 and m>0:
-            #print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
+            print(np.linalg.norm(dcoeff*grad_mult), np.linalg.norm(val.nn.get_coeff()))
             #print('test: ',np.linalg.norm(train_diff)/np.linalg.norm(train_base))
-            coeff = val.nn.get_coeff() + dcoeff
+            coeff = val.nn.get_coeff() + dcoeff*grad_mult
             # print(coeff.shape)
             val.nn.set_coeff(coeff)
 
@@ -180,16 +185,16 @@ def run_calibration(s = 0, train_final_scores = False, file_pattern = None):
 
                 test_diff[m] = np.linalg.norm(diff)
 
-            #print(np.linalg.norm(dcoeff), np.linalg.norm(val.nn.get_coeff()))
+            #print(np.linalg.norm(grad_mult*dcoeff), np.linalg.norm(val.nn.get_coeff()))
             trainerr.append(1 - (np.linalg.norm(train_diff) / np.linalg.norm(train_base)) ** 2)
             testerr.append(1 - (np.linalg.norm(test_diff) / np.linalg.norm(test_base)) ** 2)
-            #print('train: ', trainerr[-1])
-            #print('test: ', testerr[-1])
+            print('train: ', trainerr[-1])
+            print('test: ', testerr[-1])
         epoch += 1
         if train_final_scores:
             mystr = 'final_'
         else:
             mystr = ''
         print('dumping data...')
-        with open('data/calibrated_new_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
+        with open('data/calibrated_new2_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
             pickle.dump({'function': val, 'trainerr' : trainerr, 'testerr': testerr}, handle)

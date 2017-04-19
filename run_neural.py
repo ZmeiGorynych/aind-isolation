@@ -100,7 +100,7 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
             file_pattern = 'data/result?.pickle'
             keyname = 'improved, two steps exact, with reporting'
 
-    files = glob.glob(file_pattern)[:1]
+    files = glob.glob(file_pattern)
     print(files)
     depths = get_simulation_data(files)
     print(depths.keys())

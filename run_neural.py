@@ -165,7 +165,7 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
             # cnorm = np.linalg.norm(val.nn.get_coeff())
             # dcoeff = math.sqrt(cnorm/dnorm)*dcoeff
             # if m%50 == 0 and m>0:
-            print(np.linalg.norm(dcoeff*grad_mult), np.linalg.norm(val.nn.get_coeff()))
+            #print(np.linalg.norm(dcoeff*grad_mult), np.linalg.norm(val.nn.get_coeff()))
             #print('test: ',np.linalg.norm(train_diff)/np.linalg.norm(train_base))
             coeff = val.nn.get_coeff() + dcoeff*grad_mult
             # print(coeff.shape)
@@ -188,8 +188,8 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
             #print(np.linalg.norm(grad_mult*dcoeff), np.linalg.norm(val.nn.get_coeff()))
             trainerr.append(1 - (np.linalg.norm(train_diff) / np.linalg.norm(train_base)) ** 2)
             testerr.append(1 - (np.linalg.norm(test_diff) / np.linalg.norm(test_base)) ** 2)
-            print('train: ', trainerr[-1])
-            print('test: ', testerr[-1])
+            #print('train: ', trainerr[-1])
+            #print('test: ', testerr[-1])
         epoch += 1
         if train_final_scores:
             mystr = 'final_'

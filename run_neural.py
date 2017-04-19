@@ -123,7 +123,7 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
 
     if train_final_scores:
         train_moves, test_moves = final_moves_train, final_moves_test
-        sizes = [[2, 2, 2], [2,2,2,2], [3,3,3]]
+        sizes = [[2, 2], [2, 2, 2], [2, 2, 2, 2], [3,3,3]]
         val = SingleValueFunction(sizes[s])
         coeff = np.random.normal(size=val.coeff_len) * 0.5
         grad_mult = 0.0001
@@ -196,5 +196,5 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
         else:
             mystr = ''
         print('dumping data...')
-        with open('data/calibrated_new2_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
+        with open('data/ID_x2_1000ms/calibrated_new2_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
             pickle.dump({'function': val, 'trainerr' : trainerr, 'testerr': testerr}, handle)

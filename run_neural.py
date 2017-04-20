@@ -196,5 +196,5 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
         else:
             mystr = ''
         print('dumping data...')
-        with open('data/ID_x2_1000ms/calibrated_new2_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
+        with open('data/ID_x2_1000ms/calibrated_new3_' + mystr + str(s) + '_epoch_' + str(epoch) + '.pickle', 'wb') as handle:
             pickle.dump({'function': val, 'trainerr' : trainerr, 'testerr': testerr}, handle)

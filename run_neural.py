@@ -123,10 +123,10 @@ def run_calibration(s = 0, train_final_scores = True, file_pattern = None):
 
     if train_final_scores:
         train_moves, test_moves = final_moves_train, final_moves_test
-        sizes = [[2, 2], [2, 2, 2], [2, 2, 2, 2], [3,3,3]]
+        sizes = [[3,3], [3,3,3], [3,5,5,3], [4,5,4]]
         val = SingleValueFunction(sizes[s])
         coeff = np.random.normal(size=val.coeff_len) * 0.5
-        grad_mult = 0.0001
+        grad_mult = 0.00001
     else:
         train_moves, test_moves = moves_train, moves_test
         sizes = [[2, 2, 2], [2,2,2,2], [2,2,2,2,2], [3,3,3]]

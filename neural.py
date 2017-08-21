@@ -83,6 +83,7 @@ def move_convolution_indices():
     own_n = 0
     n = 20
     for index, value in move_dict.items():
+        middle_field = False
         if correct_octile(index):
             cell_index_dict[index] = [-1, index] + move_dict[index] #add self to list of neighbors
             coeff_index_dict[index] = [own_n, own_n + 10] # make sure offsets are 0:10, own coeffs 10:20
@@ -90,16 +91,30 @@ def move_convolution_indices():
             # additional symmetry in the correct octile coeffs
             pair = to_pair(index)
             if pair[0]==pair[1]:
-                mat = np.array([[0,1],[1,0]])
+                if pair[0] == 3: # middle field
+                    middle_field = True
+                else:
+                    mat = np.array([[0,1],[1,0]])
             elif pair[1] == 3:
                 mat = np.array([[1,0],[0,-1]])
             else:
                 mat = None
 
-            if mat is None:
+            if mat is None: # No additional symmetry to consider
                 for i in range(len(value)):
                     coeff_index_dict[index].append(n)
                     n += 1
+            elif middle_field:
+                    n1 = n
+                    n2 = n+1
+                    n = n+2
+                    for k in value:
+                        this_pair = to_pair(k)
+                        tmp = this_pair[0]+this_pair[1]
+                        if tmp//2 == 0:
+                            coeff_index_dict[index].append(n1)
+                        else:
+                            coeff_index_dict[index].append(n2)
             else:
                 moves_so_far = set()
                 for ind in move_dict[index]:

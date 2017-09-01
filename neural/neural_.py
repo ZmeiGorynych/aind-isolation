@@ -4,6 +4,24 @@ from collections import namedtuple
 from value_functions import to_index, to_pair, game_vector, softmax
 import copy
 
+
+def get_move_mapping_tensors():
+    all_inds, num_coeffs = move_convolution_indices()
+    num_coeffs -= 10  # the first 10 in the above function are biases, don't need them
+    num_biases = 10
+    num_fields = 7 * 7
+    conv_map = np.zeros([num_fields, num_fields, num_coeffs])
+    bias_map = np.zeros([num_fields, num_biases])
+    for cell in range(num_fields):
+        tmp = all_inds[cell]
+        bias_map[cell, tmp[0][1]] = 1
+        # print(cell,tmp[0])
+        for (ind, coeff) in tmp[1:]:
+            pair = to_pair(ind)
+            conv_map[cell, ind, coeff - 10] = 1
+
+    return conv_map, bias_map
+
 def grad_(nn, type_='p'):
     nn2 = copy.deepcopy(nn)
     val = nn.output_vector

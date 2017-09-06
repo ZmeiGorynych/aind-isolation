@@ -68,7 +68,7 @@ def par_tournament(agent):
 
 if __name__ == '__main__':
     for i in range(1,100):
-        with Pool(1) as p:
+        with Pool(8) as p:
             if True:
                 result = p.map(par_tournament, test_agents)
             else:

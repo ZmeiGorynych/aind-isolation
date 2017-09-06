@@ -191,7 +191,7 @@ class CustomPlayerComp:
     """
 
     def __init__(self, search_depth=3, score_fn=improved_score_fast_x2,
-                 iterative=True, method='minimax', timeout=10., policy = None):
+                 iterative=True, method='minimax', timeout=10., policy = None,random_eps = 0.0):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn
@@ -201,6 +201,7 @@ class CustomPlayerComp:
         self.move_dict = generate_all_moves()
         self.board_cache = [0]*49
         self.policy = policy
+        self.random_eps = random_eps
 
     def get_move(self, game, legal_moves, time_left):
         """Search for the best move from the available legal moves and return a
@@ -258,6 +259,14 @@ class CustomPlayerComp:
         if not len(moves):
             return ((-1,-1), info)
 
+        # exploration
+        if random.uniform(0,1) < self.random_eps:
+            #print('random move!')
+            info['score'] = float('nan')
+            return (random.choice(moves), info)
+        else:
+            pass
+            #print('thinking....')
 
         if self.score == partition_score or self.score == partition_score_x2: # don't need this data otherwise
             partition_score_ = partition(game, self.move_dict,

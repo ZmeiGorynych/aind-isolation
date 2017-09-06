@@ -8,7 +8,7 @@ from value_functions import improved_score_fast_x2,improved_score_fast,\
 from sample_players import null_score
 from policy import SimplePolicy
 import numpy as np
-from neural import NNValueFunction, SelectionValueFunction, SingleValueFunction
+from neural.neural_ import NNValueFunction, SelectionValueFunction, SingleValueFunction
 import numpy as np
 from copy import copy
 from sklearn.model_selection import train_test_split

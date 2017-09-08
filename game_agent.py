@@ -7,6 +7,7 @@ You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
 import random
+from constants import BOARD_WIDTH, BOARD_SIZE
 
 
 class Timeout(Exception):
@@ -636,7 +637,7 @@ class CustomPlayer:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
         self.move_dict = generate_all_moves()
-        self.board_cache = [0]*49
+        self.board_cache = [0]*BOARD_SIZE
 
 
     def get_move(self, game, legal_moves, time_left):

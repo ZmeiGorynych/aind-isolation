@@ -228,7 +228,7 @@ class HumanPlayer():
 if __name__ == "__main__":
     from isolation import Board
 
-    # create an isolation board (by default 7x7)
+    # create an isolation board (by default BOARD_WIDTHxBOARD_WIDTH)
     player1 = RandomPlayer()
     player2 = GreedyPlayer()
     game = Board(player1, player2)

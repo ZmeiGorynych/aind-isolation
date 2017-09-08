@@ -1,6 +1,7 @@
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.initializers import TruncatedNormal
+from keras.regularizers import l2
 import numpy as np
 from keras.models import Model, Sequential
 from keras.layers import Input, Lambda, Flatten, Dense, Activation, Dropout
@@ -8,12 +9,14 @@ from keras.layers.merge import Concatenate, Add
 from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 
+from constants import BOARD_SIZE
 from neural.tensorflow_utils import ch_convolve_by_moves, num_biases, num_coeffs, num_fields
 
 class ConvByMoveLayer(Layer):
-    def __init__(self, out_channels, mask=None, **kwargs):
+    def __init__(self, out_channels, mask=None, l2_reg = 0.001, **kwargs):
         self.out_channels = out_channels
         self.mask = mask
+        self.l2_reg = l2_reg
         super(ConvByMoveLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -28,7 +31,8 @@ class ConvByMoveLayer(Layer):
         self.conv_coeffs = self.add_weight(name='conv_coeffs',
                                            shape=(num_coeffs, in_channels, self.out_channels),
                                            initializer=TruncatedNormal(stddev=init_std),
-                                           trainable=True)
+                                           trainable=True,
+                                           regularizer = l2(self.l2_reg))
         # print((num_coeffs, in_channels, self.out_channels))
         self.biases = self.add_weight(name='biases',
                                       shape=(num_biases, self.out_channels),
@@ -55,8 +59,8 @@ def ResNetLayerFun(x, num_features = 3, mask = None, drop_rate = 0.1):
 
    
 def deep_model_fun(num_features = 16, num_res_modules = 16, drop_rate = 0.1, activation = 'sigmoid'):
-    player_pos_one_hot = Input(shape = [49, 2])
-    board_state = Input(shape=[49,1])
+    player_pos_one_hot = Input(shape = [BOARD_SIZE, 2])
+    board_state = Input(shape=[BOARD_SIZE,1])
     mask = board_state
     #tmp1 = K.expand_dims(board_state, 2)# TODO: do this in Keras code
     out = Concatenate()([board_state, player_pos_one_hot])

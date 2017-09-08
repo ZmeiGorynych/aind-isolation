@@ -2,6 +2,7 @@ from copy import copy
 import numpy as np
 from neural.neural_ import generate_all_moves_by_index, to_pair
 from neural.data_utils import prepare_data_for_model
+from constants import BOARD_SIZE
 # in the below, game is a dict with the fields
 # 'pos' is [pos of player about to move, other_pos]
 # 'game' is a vector of 0s for used fields, 1s for available fields
@@ -9,7 +10,7 @@ move_dict = generate_all_moves_by_index()
 
 def get_legal_moves(game):
     if game['pos'][0] is None:
-        return [m for m in range(49) if game['game'][m] == 1]
+        return [m for m in range(BOARD_SIZE) if game['game'][m] == 1]
     else:
         moves = move_dict[game['pos'][0]]
         return [m for m in moves if game['game'][m] == 1]
@@ -60,7 +61,7 @@ class NeuralAgent:
         return  (to_pair(move), info)
 
 if __name__ == '__main__': # sample testing code
-    board = np.ones(49)
+    board = np.ones(BOARD_SIZE)
     my_pos = None
     other_pos = None
     game = {'pos': np.array([my_pos, other_pos]), 'game': board}

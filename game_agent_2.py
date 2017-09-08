@@ -57,7 +57,7 @@ class CustomPlayer2:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
         self.move_dict = generate_all_moves()
-        self.board_cache = [0]*49
+        self.board_cache = [0]*BOARD_SIZE
 
 
 

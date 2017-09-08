@@ -3,13 +3,13 @@ from collections import namedtuple
 # define mapping from coeffs to
 from value_functions import to_index, to_pair, game_vector, softmax
 import copy
-
+from constants import BOARD_SIZE, BOARD_WIDTH
 
 def get_move_mapping_tensors():
     all_inds, num_coeffs = move_convolution_indices()
     num_coeffs -= 10  # the first 10 in the above function are biases, don't need them
     num_biases = 10
-    num_fields = 7 * 7
+    num_fields = BOARD_SIZE
     conv_map = np.zeros([num_fields, num_fields, num_coeffs])
     bias_map = np.zeros([num_fields, num_biases])
     for cell in range(num_fields):
@@ -49,8 +49,8 @@ def grad_(nn, type_='p'):
 
 
 def square_print(vec):
-    for i in range(7):
-        print(vec[i*7:(i+1)*7])
+    for i in range(BOARD_WIDTH):
+        print(vec[i*BOARD_WIDTH:(i+1)*BOARD_WIDTH])
 
 
 def generate_all_moves_by_index():
@@ -82,9 +82,10 @@ def rotation_matrices():
     return matrix_array
 
 def rotate_index(ind, mat):
+    BOARD_MID = (BOARD_WIDTH-1)/2
     pair = to_pair(ind)
-    point = np.array(pair) - 3
-    r_point = (mat.dot(point) + 3.1).astype(int)
+    point = np.array(pair) - BOARD_MID
+    r_point = (mat.dot(point) + BOARD_MID + 0.1).astype(int)
     return to_index(r_point)
 
 def correct_octile(index):
@@ -181,7 +182,7 @@ class MoveConvolutionIndices:
         return self.joint_indices, self.coeff_len
 
 def move_convolution(move_vec, coeff_vec, joint_indices,
-                     mask = None, result_vector = np.array([0]*49)):
+                     mask = None, result_vector = np.array([0]*BOARD_SIZE)):
     for index, indlist in joint_indices.items():
         # first coeff is offset
         result_vector[index] = coeff_vec[indlist[0][1]] # offset
@@ -223,8 +224,8 @@ class ConvolutionUnit:
     def __init__(self, relu = True):
 
         self.joint_indices, self.coeff_len = MoveConvolutionIndices()()
-        self.input_len = 7*7
-        self.output_len = 7*7
+        self.input_len = BOARD_SIZE
+        self.output_len = BOARD_SIZE
         self.output_vec = np.zeros(self.output_len)
         self.relu = relu
 
@@ -384,7 +385,7 @@ if False:
 class SillySubtractionStage:
     def __init__(self):
         self.coeff_len = 2
-        self.input_len = 49
+        self.input_len = BOARD_SIZE
         self.output_len = 1
 
     def set_coeff(self, coeff):
@@ -412,7 +413,7 @@ class SillySubtractionStage:
 class SelectionStage: #TODO: add softmax
     def __init__(self):
         self.coeff_len = 0
-        self.input_len = 49
+        self.input_len = BOARD_SIZE
         self.output_len = 0
 
     def set_coeff(self, coeff):
@@ -441,7 +442,7 @@ class SelectionStage: #TODO: add softmax
 class SoftmaxSelectionStage: #TODO: add softmax
     def __init__(self):
         self.coeff_len = 0
-        self.input_len = 49
+        self.input_len = BOARD_SIZE
         self.output_len = 0
 
     def set_coeff(self, coeff):
@@ -472,8 +473,8 @@ class SoftmaxSelectionStage: #TODO: add softmax
 
 class SingleOutputStage: #TODO: add softmax
     def __init__(self):
-        self.coeff_len = 49
-        self.input_len = 49
+        self.coeff_len = BOARD_SIZE
+        self.input_len = BOARD_SIZE
         self.output_len = 1
 
     def set_coeff(self, coeff):
@@ -519,7 +520,7 @@ class SelectionValueFunction():
         self.nn.append_stage(SoftmaxSelectionStage())
         #self.nn.append_stage(SelectionStage())
         self.coeff_len = self.nn.coeff_len
-        self.dummy = np.zeros(3*49)
+        self.dummy = np.zeros(3*BOARD_SIZE)
 
     def set_coeff(self, coeff):
         self.nn.set_coeff(coeff)
@@ -533,10 +534,10 @@ class SelectionValueFunction():
         self.nn.stages[-1].set_indices(indices)
         self.nn.refresh()
         # one-hot encode my and opponent position
-        self.dummy[:49] = input_vec
-        self.dummy[49:] = 0
-        self.dummy[49 + pos[0]] = 1
-        self.dummy[2*49 + pos[1]] = 1
+        self.dummy[:BOARD_SIZE] = input_vec
+        self.dummy[BOARD_SIZE:] = 0
+        self.dummy[BOARD_SIZE + pos[0]] = 1
+        self.dummy[2*BOARD_SIZE + pos[1]] = 1
         tmp = self.nn(self.dummy, mask)
         return tmp
 
@@ -546,17 +547,17 @@ class SingleValueFunction():
         self.nn = ConvolutionNetwork(self.dims)
         self.nn.append_stage(SingleOutputStage())
         self.coeff_len = self.nn.coeff_len
-        self.dummy = np.zeros(3*49)
+        self.dummy = np.zeros(3*BOARD_SIZE)
 
     def set_coeff(self, coeff):
         self.nn.set_coeff(coeff)
 
     def eval(self, input_vec = None, pos = None, mask = None):
         # one-hot encode my and opponent position
-        self.dummy[:49] = input_vec
-        self.dummy[49:] = 0
-        self.dummy[49 + pos[0]] = 1
-        self.dummy[2*49 + pos[1]] = 1
+        self.dummy[:BOARD_SIZE] = input_vec
+        self.dummy[BOARD_SIZE:] = 0
+        self.dummy[BOARD_SIZE + pos[0]] = 1
+        self.dummy[2*BOARD_SIZE + pos[1]] = 1
         tmp = self.nn(self.dummy, mask)
         return tmp
 
@@ -567,7 +568,7 @@ if False: #TODO: remove this section!
     val.set_coeff(np.ones(val.coeff_len))
     val.nn.stages[-1].set_indices([23, 45])
     val.nn.refresh()
-    val.nn(np.ones(3*49), np.ones(49))
+    val.nn(np.ones(3*BOARD_SIZE), np.ones(BOARD_SIZE))
     print(val.nn.output_len, val.nn.coeff_len)
     print(val.nn.grad().shape)
     delta = grad_(val.nn) -val.nn.grad()

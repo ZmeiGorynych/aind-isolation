@@ -1,4 +1,5 @@
 import numpy as np
+from constants import BOARD_SIZE, BOARD_WIDTH
 def generate_all_moves():
     from sample_players import RandomPlayer
     from isolation import Board
@@ -22,21 +23,21 @@ def softmax(x):
 
 
 
-def to_index(pair, board_size=7):
+def to_index(pair, board_size=BOARD_WIDTH):
     if pair is not None:
         return pair[0] + board_size * pair[1]
     else:
         return None
 
 
-def to_pair(index, board_size=7):  # correct?
+def to_pair(index, board_size=BOARD_WIDTH):  # correct?
     if index is not None:
         return (index % board_size, int(index / board_size))
     else:
         return None
 
 def game_vector(game, player):
-    output = np.zeros(49)
+    output = np.zeros(BOARD_SIZE)
     moves = game.get_blank_spaces()
     for move in moves:
         output[to_index(move)] = 1

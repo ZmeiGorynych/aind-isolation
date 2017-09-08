@@ -9,6 +9,7 @@ relative strength using tournament.py and include the results in your report.
 import random
 from value_functions import partition_score_x2, partition_score, partition, \
     generate_all_moves
+from constants import BOARD_WIDTH, BOARD_SIZE
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
@@ -199,7 +200,7 @@ class CustomPlayerComp:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
         self.move_dict = generate_all_moves()
-        self.board_cache = [0]*49
+        self.board_cache = [0]*BOARD_SIZE
         self.policy = policy
         self.random_eps = random_eps
 

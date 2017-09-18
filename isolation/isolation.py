@@ -322,7 +322,6 @@ class Board(object):
         from reporting import Reporting
         reporter =Reporting()
         while True:
-
             legal_player_moves = self.get_legal_moves()
             game_copy = self.copy()
 

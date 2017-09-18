@@ -13,7 +13,7 @@ from constants import BOARD_SIZE
 from neural.tensorflow_utils import ch_convolve_by_moves, num_biases, num_coeffs, num_fields
 
 class ConvByMoveLayer(Layer):
-    def __init__(self, out_channels, mask=None, l2_reg = 0.001, **kwargs):
+    def __init__(self, out_channels, mask=None, l2_reg = 0.01, **kwargs):
         self.out_channels = out_channels
         self.mask = mask
         self.l2_reg = l2_reg

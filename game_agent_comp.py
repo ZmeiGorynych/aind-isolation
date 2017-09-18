@@ -192,7 +192,8 @@ class CustomPlayerComp:
     """
 
     def __init__(self, search_depth=3, score_fn=improved_score_fast_x2,
-                 iterative=True, method='minimax', timeout=10., policy = None,random_eps = 0.0):
+                 iterative=True, method='minimax', timeout=10.,
+                 policy = None,random_eps = 0.0, name = None):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn
@@ -203,6 +204,7 @@ class CustomPlayerComp:
         self.board_cache = [0]*BOARD_SIZE
         self.policy = policy
         self.random_eps = random_eps
+        self.name = name
 
     def get_move(self, game, legal_moves, time_left):
         """Search for the best move from the available legal moves and return a

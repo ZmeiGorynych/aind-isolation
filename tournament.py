@@ -140,6 +140,7 @@ def play_round(agents, num_matches, time_limit = TIME_LIMIT):
 
     return 100. * wins / total
 
+CUSTOM_ARGS = {"method": 'alphabeta', 'iterative': True}
 
 def tournament(num_matches=NUM_MATCHES, time_limit=TIME_LIMIT, test_agents=None,
                opponents=None):
@@ -149,7 +150,7 @@ def tournament(num_matches=NUM_MATCHES, time_limit=TIME_LIMIT, test_agents=None,
                   ("Improved", improved_score)]
     AB_ARGS = {"search_depth": 5, "method": 'alphabeta', "iterative": False}
     MM_ARGS = {"search_depth": 3, "method": 'minimax', "iterative": False}
-    CUSTOM_ARGS = {"method": 'alphabeta', 'iterative': True}
+
 
     # Create a collection of CPU agents using fixed-depth minimax or alpha beta
     # search, or random selection.  The agent names encode the search method

@@ -638,6 +638,7 @@ class CustomPlayer:
         self.TIMER_THRESHOLD = timeout
         self.move_dict = generate_all_moves()
         self.board_cache = [0]*BOARD_SIZE
+        self.name = None
 
 
     def get_move(self, game, legal_moves, time_left):

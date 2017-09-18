@@ -1,4 +1,5 @@
 from value_functions import game_vector
+import copy
 
 class Borg:
     _shared_state = {}
@@ -12,8 +13,7 @@ class Reporting(Borg):
             self.report = []
 
 
-def get_depths(report, test_agents, func=lambda x: x['depth']):
-
+def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.99):
     # get player names:
     players = []
     for game in report:
@@ -25,28 +25,25 @@ def get_depths(report, test_agents, func=lambda x: x['depth']):
             except:
                 pass
 
-    print(players)
+    #print('****', players)
     depths = {}
     out_depths = {}
 
     for p in players:
         depths[p] = []
         for game in report:
-            winner = game['winner'] == p.player
+            winner = float(game['winner'] == p.player)
             depths[p].append([])
-            for move in game['moves']:
+            for m, move in enumerate(game['moves']):
                 try:
-                    move['winner'] = winner
-                except:
-                    pass
-
-                try:
-                    move['game'], move['pos'] = game_vector(move['game_'],p.player)
-                except:
-                    pass
-
-                try:
+                    move = copy.copy(move)
                     if move['active_player'] == p.player:
+                        move['winner'] = winner
+                        move['game'], move['pos'] = game_vector(move['game_'],p.player)
+                        move['game_'] = None
+                        move['active_player'] = None
+                        moves_left = len(game['moves']) - m
+                        move['G'] = disc_factor**moves_left
                         depths[p][-1].append(func(move))
                 except:
                     pass

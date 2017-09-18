@@ -1,14 +1,16 @@
 import numpy as np
 from collections import namedtuple
+from constants import BOARD_SIZE, BOARD_WIDTH
+
 # define mapping from coeffs to
 from value_functions import to_index, to_pair, game_vector, softmax
 import copy
-from constants import BOARD_SIZE, BOARD_WIDTH
+from constants import BOARD_SIZE, BOARD_WIDTH, NUM_BIASES, BOARD_MID
 
 def get_move_mapping_tensors():
     all_inds, num_coeffs = move_convolution_indices()
-    num_coeffs -= 10  # the first 10 in the above function are biases, don't need them
-    num_biases = 10
+    num_coeffs -= NUM_BIASES  # the first 10 in the above function are biases, don't need them
+    num_biases = NUM_BIASES
     num_fields = BOARD_SIZE
     conv_map = np.zeros([num_fields, num_fields, num_coeffs])
     bias_map = np.zeros([num_fields, num_biases])
@@ -18,7 +20,7 @@ def get_move_mapping_tensors():
         # print(cell,tmp[0])
         for (ind, coeff) in tmp[1:]:
             pair = to_pair(ind)
-            conv_map[cell, ind, coeff - 10] = 1
+            conv_map[cell, ind, coeff - NUM_BIASES] = 1
 
     return conv_map, bias_map
 
@@ -56,7 +58,6 @@ def square_print(vec):
 def generate_all_moves_by_index():
     from sample_players import RandomPlayer
     from isolation import Board
-
     move_dict = {}
     player1 = RandomPlayer()
     player2 = RandomPlayer()
@@ -82,7 +83,7 @@ def rotation_matrices():
     return matrix_array
 
 def rotate_index(ind, mat):
-    BOARD_MID = (BOARD_WIDTH-1)/2
+
     pair = to_pair(ind)
     point = np.array(pair) - BOARD_MID
     r_point = (mat.dot(point) + BOARD_MID + 0.1).astype(int)
@@ -90,7 +91,7 @@ def rotate_index(ind, mat):
 
 def correct_octile(index):
     pair = to_pair(index)
-    return pair[1] <=3 and pair[0] <= pair[1]
+    return pair[1] <=BOARD_MID and pair[0] <= pair[1]
 
 def move_convolution_indices():
     move_dict = generate_all_moves_by_index()
@@ -100,21 +101,21 @@ def move_convolution_indices():
     # TODO: additional symmetry in the correct octile coeffs
     #make sure offsets are 0:10, own coeffs 10:20
     own_n = 0
-    n = 20
+    n = 2*NUM_BIASES
     for index, value in move_dict.items():
         middle_field = False
         if correct_octile(index):
             cell_index_dict[index] = [-1, index] + move_dict[index] #add self to list of neighbors
-            coeff_index_dict[index] = [own_n, own_n + 10] # make sure offsets are 0:10, own coeffs 10:20
+            coeff_index_dict[index] = [own_n, own_n + NUM_BIASES] # make sure offsets are 0:10, own coeffs 10:20
             own_n += 1
             # additional symmetry in the correct octile coeffs
             pair = to_pair(index)
             if pair[0]==pair[1]:
-                if pair[0] == 3: # middle field
+                if pair[0] == BOARD_MID: # middle field
                     middle_field = True
                 else:
                     mat = np.array([[0,1],[1,0]])
-            elif pair[1] == 3:
+            elif pair[1] == BOARD_MID:
                 mat = np.array([[1,0],[0,-1]])
             else:
                 mat = None

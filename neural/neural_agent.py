@@ -38,8 +38,9 @@ def get_best_move_from_model(game, model = None):
         return (0,float('-inf'))
 
 class NeuralAgent:
-    def __init__(self, model):
+    def __init__(self, model, name = None):
         self.model = model
+        self.name = name
 
     def get_move(self, game, *args):
         try: # extact board and player position info from a Udacity game class

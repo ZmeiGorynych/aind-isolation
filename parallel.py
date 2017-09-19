@@ -1,17 +1,16 @@
-from tournament import tournament
-from reporting import Reporting, get_depths
-from multiprocessing import Pool
-import importlib
-from collections import namedtuple
-from game_agent_comp import CustomPlayerComp
-from game_agent import CustomPlayer
-from value_functions import improved_score_fast_x2,improved_score_fast,\
-    improved_score_fast_x3, partition_score_x2
-from sample_players import improved_score
-
-from sample_players import null_score
-from policy import SimplePolicy
 import pickle
+from collections import namedtuple
+from multiprocessing import Pool
+
+from data_utils import get_depths
+from game_agent import CustomPlayer
+from game_agent_comp import CustomPlayerComp
+from policy import SimplePolicy
+from sample_players import improved_score
+from sample_players import null_score
+from tournament import tournament
+from value_functions import improved_score_fast_x2, improved_score_fast, \
+    improved_score_fast_x3, partition_score_x2
 
 #importlib.reload(reporting)
 Agent = namedtuple("Agent", ["player", "name"])

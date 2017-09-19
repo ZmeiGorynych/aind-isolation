@@ -14,11 +14,21 @@ from constants import BOARD_SIZE
 from neural.tensorflow_utils import ch_convolve_by_moves, num_biases, num_coeffs, num_fields
 
 class ConvByMoveLayer(Layer):
-    def __init__(self, out_channels, mask=None, l2_reg = 0.01, **kwargs):
+    def __init__(self, out_channels=None, mask=None, l2_reg = 0.01, **kwargs):
         self.out_channels = out_channels
         self.mask = mask
         self.l2_reg = l2_reg
         super(ConvByMoveLayer, self).__init__(**kwargs)
+
+    # The below was intended to make this layer work with model.save(), but throws a strange error
+    # def get_config(self):
+    #     config = {
+    #         'out_channels': self.out_channels,
+    #         'mask':self.mask,
+    #         'l2_reg':self.l2_reg
+    #     }
+    #     base_config = super(ConvByMoveLayer, self).get_config()
+    #     return dict(list(base_config.items()) + list(config.items()))
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
@@ -89,12 +99,12 @@ def deep_model_fun(num_features = 16, num_res_modules = 16, drop_rate = 0.1, act
     # helper function, Keras doesn't seem to have one, strangely
     sum_dim1 = Lambda(lambda x: K.sum(x, axis=1), output_shape=[1])
 
-    # compute softmax only over the legal moves
-    out_all_moves = Activation(K.exp)(out)
-    out_all_moves = Multiply()([out, legal_moves])
-    sum_moves = Reshape([1,1])(sum_dim1(out_all_moves))
-    inv_sum_moves = Activation(lambda x: K.pow(x,-1))(sum_moves)
-    out_all_moves = Multiply()([out_all_moves, inv_sum_moves])
+    out_all_moves = Activation('sigmoid')(out)
+    out_all_moves = Multiply()([out_all_moves, legal_moves])
+
+    # sum_moves = Reshape([1,1])(sum_dim1(out_all_moves))
+    # inv_sum_moves = Activation(lambda x: K.pow(x,-1))(sum_moves)
+    # out_all_moves = Multiply()([out_all_moves, inv_sum_moves])
 
     # output the value corresponding to the next move
     out_next = Multiply()([out, next_move])
@@ -104,5 +114,5 @@ def deep_model_fun(num_features = 16, num_res_modules = 16, drop_rate = 0.1, act
     # out = Dense(1, activation = activation)(out)
     out_next = Activation(activation)(out_next)
     deep_model = Model(inputs = [board_state, player_pos_one_hot, legal_moves, next_move], outputs = out_next)
-    deep_pi = Model(inputs = [board_state, player_pos_one_hot, legal_moves], outputs = out_all_moves)
-    return deep_model, deep_pi
+    deep_Q = Model(inputs = [board_state, player_pos_one_hot, legal_moves], outputs = out_all_moves)
+    return deep_model, deep_Q

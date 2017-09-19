@@ -1,24 +1,13 @@
-from copy import copy
-
 import numpy as np
 
 from constants import BOARD_SIZE
-from neural.data_utils import prepare_data_for_model
+from data_utils import prepare_data_for_model, apply_move
 from neural.neural_ import to_pair, get_legal_moves
 
 
 # in the below, game is a dict with the fields
 # 'pos' is [pos of player about to move, other_pos]
 # 'game' is a vector of 0s for used fields, 1s for available fields
-
-def apply_move(game, move):
-    if not move in get_legal_moves(game):
-        raise ValueError('Illegal move!')
-    new_board = copy(game['game'])
-    new_board[move] = 0
-    other_pos = move
-    moving_pos = game['pos'][1]
-    return {'game': new_board, 'pos': np.array([moving_pos, other_pos])}
 
 # def get_best_move_from_model(game, model):
 #     moves = get_legal_moves(game)

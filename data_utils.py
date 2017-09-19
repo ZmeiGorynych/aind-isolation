@@ -1,8 +1,11 @@
+import copy
 import pickle
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from neural.neural_ import get_legal_moves, to_index
 from constants import BOARD_SIZE
+from value_functions import game_vector, to_index
+
 
 def load_simulation_data(files):
     depths = {}
@@ -69,3 +72,64 @@ def prepare_data_for_model(states, score_name = 'simple_score'):
     valid_moves = valid_moves*board_full # can only move to an unused field
     #print(board_full.shape,player_pos_one_hot_value.shape)
     return board_full, player_pos_one_hot_value, valid_moves, next_move, y
+
+
+def apply_move(game, move):
+    if not move in get_legal_moves(game):
+        raise ValueError('Illegal move!')
+    new_board = copy.copy(game['game'])
+    new_board[move] = 0
+    other_pos = move
+    moving_pos = game['pos'][1]
+    return {'game': new_board, 'pos': np.array([moving_pos, other_pos])}
+
+
+def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.99):
+    # get player names:
+    players = []
+    for game in report:
+        for move in game['moves']:
+            try:
+                full_player = [p for p in test_agents if p.player == move['active_player']][0]
+                if full_player not in players:
+                    players.append(full_player)
+            except:
+                pass
+
+    #print('****', players)
+    depths = {}
+    out_depths = {}
+
+    for p in players:
+        depths[p] = []
+        for game in report:
+            winner = float(game['winner'] == p.player)
+            depths[p].append([])
+            for m, move_ in enumerate(game['moves']):
+                try:
+                    move = copy.copy(move_)
+                    if move['active_player'].name == p.player.name:
+                        move['winner'] = winner
+                        move['game'], move['pos'] = game_vector(move['game_'],p.player)
+                        try: # if the move is a pair rather than an index
+                            move['move'] = to_index(move['move'])
+                        except:
+                            pass
+                        move['next_state'] = apply_move(move,move['move'])
+                        move['game_'] = None
+                        move['active_player'] = None
+                        moves_left = len(game['moves']) - m
+                        # discounted final reward
+                        move['G'] = 0.5 + (winner - 0.5)*(disc_factor**moves_left)
+                        depths[p][-1].append(func(move))
+                except:
+                    pass
+
+        clean = []
+        for game in depths[p]:
+            if game:
+                clean.append(game)
+
+        out_depths[p.name] = clean
+
+    return out_depths

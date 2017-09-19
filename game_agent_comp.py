@@ -193,7 +193,7 @@ class CustomPlayerComp:
 
     def __init__(self, search_depth=3, score_fn=improved_score_fast_x2,
                  iterative=True, method='minimax', timeout=10.,
-                 policy = None,random_eps = 0.0, name = None):
+                 policy = None,random_eps = 0.1, name = None):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn

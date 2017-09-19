@@ -599,9 +599,17 @@ if True:
     print(win_ratio(results))
 '''
 
+move_dict = generate_all_moves_by_index()
+def get_legal_moves(game):
+    if game['pos'][0] is None:
+        return [m for m in range(BOARD_SIZE) if game['game'][m] == 1]
+    else:
+        moves = move_dict[game['pos'][0]]
+        return [m for m in moves if game['game'][m] == 1]
+
+
 if __name__ == "__main__":
     move_convolution_indices()
-
 
 
 

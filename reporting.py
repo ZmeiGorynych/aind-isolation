@@ -1,4 +1,5 @@
 from value_functions import game_vector
+from neural.neural_ import to_index
 import copy
 
 class Borg:
@@ -40,10 +41,12 @@ def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.9
                     if move['active_player'] == p.player:
                         move['winner'] = winner
                         move['game'], move['pos'] = game_vector(move['game_'],p.player)
+                        move['move'] = to_index(move['move'])
                         move['game_'] = None
                         move['active_player'] = None
                         moves_left = len(game['moves']) - m
-                        move['G'] = disc_factor**moves_left
+                        # discounted final reward
+                        move['G'] = 0.5 + (winner - 0.5)*(disc_factor**moves_left)
                         depths[p][-1].append(func(move))
                 except:
                     pass

@@ -1,10 +1,11 @@
+from math import exp
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.initializers import TruncatedNormal
 from keras.regularizers import l2
 import numpy as np
 from keras.models import Model, Sequential
-from keras.layers import Input, Lambda, Flatten, Dense, Activation, Dropout
+from keras.layers import Input, Lambda, Flatten, Dense, Activation, Dropout, Conv1D, Multiply,Reshape
 from keras.layers.merge import Concatenate, Add
 from keras.layers.normalization import BatchNormalization
 from keras import backend as K
@@ -61,17 +62,47 @@ def ResNetLayerFun(x, num_features = 3, mask = None, drop_rate = 0.1):
 def deep_model_fun(num_features = 16, num_res_modules = 16, drop_rate = 0.1, activation = 'sigmoid'):
     player_pos_one_hot = Input(shape = [BOARD_SIZE, 2])
     board_state = Input(shape=[BOARD_SIZE,1])
+    legal_moves = Input(shape=[BOARD_SIZE, 1])
+    next_move = Input(shape=[BOARD_SIZE, 1])
     mask = board_state
-    #tmp1 = K.expand_dims(board_state, 2)# TODO: do this in Keras code
     out = Concatenate()([board_state, player_pos_one_hot])
-    out = ConvByMoveLayer(num_features, mask)(out)
+    # the below is to match the number of channels to what the resnet layers expect
+    out = Conv1D(filters=num_features, kernel_size=1)(out)
     for _ in range(num_res_modules):
         out = ResNetLayerFun(out, num_features, mask, drop_rate)
     out = Activation('relu')(out)
-    out = Concatenate()([out, player_pos_one_hot])
-    out = Flatten()(out)
-    out = Dense(10, activation = 'relu')(out)
-    out = Dense(1, activation = activation)(out)
+    # add player positions again, just in case #TODO is that helpful?
+    out = Concatenate()([out, player_pos_one_hot, legal_moves])
+    # out = ConvByMoveLayer(num_features, mask)(out)
 
-    deep_model = Model(inputs = [player_pos_one_hot, board_state], outputs = out)
-    return deep_model
+    # share information across fields
+    dense_conv = Flatten()(out)
+    dense_conv = Dense(3 * BOARD_SIZE, activation='relu')(dense_conv)
+    dense_conv = Dense(BOARD_SIZE)(dense_conv)
+    dense_conv = Reshape([BOARD_SIZE,1])(dense_conv)
+    out = dense_conv
+
+    # # add that to the original and collapse to one channel : fits very badly
+    # out = Concatenate()([out,dense_conv])
+    # out = Conv1D(filters = 1, kernel_size=1, activation='relu')(out)
+
+    # helper function, Keras doesn't seem to have one, strangely
+    sum_dim1 = Lambda(lambda x: K.sum(x, axis=1), output_shape=[1])
+
+    # compute softmax only over the legal moves
+    out_all_moves = Activation(K.exp)(out)
+    out_all_moves = Multiply()([out, legal_moves])
+    sum_moves = Reshape([1,1])(sum_dim1(out_all_moves))
+    inv_sum_moves = Activation(lambda x: K.pow(x,-1))(sum_moves)
+    out_all_moves = Multiply()([out_all_moves, inv_sum_moves])
+
+    # output the value corresponding to the next move
+    out_next = Multiply()([out, next_move])
+    out_next = sum_dim1(out_next)
+    # out = Flatten()(out)
+    # out = Dense(10, activation = 'relu')(out)
+    # out = Dense(1, activation = activation)(out)
+    out_next = Activation(activation)(out_next)
+    deep_model = Model(inputs = [board_state, player_pos_one_hot, legal_moves, next_move], outputs = out_next)
+    deep_pi = Model(inputs = [board_state, player_pos_one_hot, legal_moves], outputs = out_all_moves)
+    return deep_model, deep_pi

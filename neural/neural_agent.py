@@ -1,19 +1,15 @@
 from copy import copy
+
 import numpy as np
-from neural.neural_ import generate_all_moves_by_index, to_pair
-from neural.data_utils import prepare_data_for_model
+
 from constants import BOARD_SIZE
+from neural.data_utils import prepare_data_for_model
+from neural.neural_ import to_pair, get_legal_moves
+
+
 # in the below, game is a dict with the fields
 # 'pos' is [pos of player about to move, other_pos]
 # 'game' is a vector of 0s for used fields, 1s for available fields
-move_dict = generate_all_moves_by_index()
-
-def get_legal_moves(game):
-    if game['pos'][0] is None:
-        return [m for m in range(BOARD_SIZE) if game['game'][m] == 1]
-    else:
-        moves = move_dict[game['pos'][0]]
-        return [m for m in moves if game['game'][m] == 1]
 
 def apply_move(game, move):
     if not move in get_legal_moves(game):
@@ -24,18 +20,34 @@ def apply_move(game, move):
     moving_pos = game['pos'][1]
     return {'game': new_board, 'pos': np.array([moving_pos, other_pos])}
 
-def get_best_move_from_model(game, model = None):
-    moves = get_legal_moves(game)
-    if len(moves):
-        tmp = [apply_move(game, move) for move in moves]
-        #print(tmp)
-        board, pos, _ = prepare_data_for_model(tmp,None)
-        valuations = 1 - model.predict([pos, board])
-        best_ind = np.argmax(valuations)
-        #print(best_ind)
-        return moves[best_ind], valuations[best_ind]
+# def get_best_move_from_model(game, model):
+#     moves = get_legal_moves(game)
+#     if len(moves):
+#         tmp = [apply_move(game, move) for move in moves]
+#         #print(tmp)
+#         board, pos, _ = prepare_data_for_model(tmp,None)
+#         valuations = 1-model.predict([pos, board])
+#         best_ind = np.argmax(valuations)
+#         #print(best_ind)
+#         return moves[best_ind], valuations[best_ind]
+#     else:
+#         return (0,float('-inf'))
+def get_best_move_from_model(game, model):
+    board, pos, legal_moves, _, _ = prepare_data_for_model([game], None)
+    move_probs = model.predict([board, pos, legal_moves])[0].T[0]
+    if True:
+        best_move = np.argmax(move_probs)
+        #print(move_probs)
     else:
-        return (0,float('-inf'))
+        leg_moves = get_legal_moves(game)
+        if not len(leg_moves): # if no legal moves left
+            return (0,0)
+        move_probs_legal = move_probs[leg_moves]
+        best_move = leg_moves[np.argmin(move_probs_legal)]
+    return best_move, move_probs[best_move]
+
+
+
 
 class NeuralAgent:
     def __init__(self, model, name = None):

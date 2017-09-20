@@ -136,5 +136,5 @@ def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.9
                 clean.append(game)
 
         out_depths[p.name] = clean
-    print(list(Gs))
+    #print(list(Gs))
     return out_depths

@@ -32,7 +32,8 @@ def get_best_move_from_model(game, model, temperature = 1.0):
         if not len(leg_moves): # if no legal moves left
             return (-1,-1)
         move_probs_legal = move_probs[leg_moves]
-        p = softmax(move_probs_legal/temperature)
+        tmp = np.exp(move_probs_legal)
+        p = tmp/sum(tmp)
         best_move = np.random.choice(leg_moves, p=p)
     return best_move, move_probs[best_move]
 

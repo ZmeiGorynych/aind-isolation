@@ -40,9 +40,10 @@ def get_best_move_from_model(game, model, temperature = 1.0):
 
 
 class NeuralAgent:
-    def __init__(self, model, name = None):
+    def __init__(self, model, name = None, temperature = 1.0):
         self.model = model
         self.name = name
+        self.temperature = temperature
 
     def get_move(self, game, *args):
         try: # extact board and player position info from a Udacity game class
@@ -57,7 +58,7 @@ class NeuralAgent:
             else:
                 raise ValueError('game must be either a Udacity-style game or a dict with fields game and pos')
         #print('info', info)
-        move, score = get_best_move_from_model(info, self.model)
+        move, score = get_best_move_from_model(info, self.model, self.temperature)
         #print('yippee',pos, get_legal_moves(info), move, score)
         info['move'] = move
         info['n_score'] = score

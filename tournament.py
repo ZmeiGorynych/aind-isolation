@@ -206,7 +206,7 @@ def tournament(num_matches=NUM_MATCHES, time_limit=TIME_LIMIT, test_agents=None,
 
     from reporting import Reporting
     r = Reporting()
-    return r.report
+    return r.report, win_ratio
 
 if __name__ == "__main__":
     tournament()

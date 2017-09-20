@@ -3,7 +3,8 @@ import numpy as np
 from constants import BOARD_SIZE
 from data_utils import prepare_data_for_model, apply_move
 from neural.neural_ import to_pair, get_legal_moves
-from keras.activations import softmax
+from keras.optimizers import Adam
+from tournament import Agent
 
 # in the below, game is a dict with the fields
 # 'pos' is [pos of player about to move, other_pos]
@@ -64,6 +65,13 @@ class NeuralAgent:
         info['move'] = move
         info['n_score'] = score
         return  (to_pair(move), info)
+
+def create_neural_agent(model_fun, name = None, learning_rate = 0.0001):
+    deep_model, deep_Q_model = model_fun()
+    #deep_Q_model.load_weights(filename)#,custom_objects={'ConvByMoveLayer': ConvByMoveLayer})
+    deep_model.compile(optimizer = Adam(lr=learning_rate),  loss='mean_squared_error')
+    my_agent = NeuralAgent(deep_Q_model, name = name)
+    return Agent(my_agent,name), deep_model, deep_Q_model
 
 if __name__ == '__main__': # sample testing code
     board = np.ones(BOARD_SIZE)

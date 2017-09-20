@@ -96,11 +96,12 @@ def deep_model_fun(num_features = 16, num_res_modules = 16, drop_rate = 0.1, act
     # out = Concatenate()([out,dense_conv])
     # out = Conv1D(filters = 1, kernel_size=1, activation='relu')(out)
 
-    # helper function, Keras doesn't seem to have one, strangely
-    sum_dim1 = Lambda(lambda x: K.sum(x, axis=1), output_shape=[1])
 
     out_all_moves = Activation('sigmoid')(out)
     out_all_moves = Multiply()([out_all_moves, legal_moves])
+
+    # helper function, Keras doesn't seem to have one, strangely
+    sum_dim1 = Lambda(lambda x: K.sum(x, axis=1), output_shape=[1])
 
     # sum_moves = Reshape([1,1])(sum_dim1(out_all_moves))
     # inv_sum_moves = Activation(lambda x: K.pow(x,-1))(sum_moves)

@@ -99,7 +99,7 @@ def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.9
     #print('****', players)
     depths = {}
     out_depths = {}
-
+    Gs = set()
     for p in players:
         depths[p] = []
         for game in report:
@@ -115,12 +115,17 @@ def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.9
                             move['move'] = to_index(move['move'])
                         except:
                             pass
-                        move['next_state'] = apply_move(move,move['move'])
+
+                        try: #this will fail if this is the final state
+                            move['next_state'] = apply_move(move,move['move'])
+                        except:
+                            move['next_state'] = None
                         move['game_'] = None
                         move['active_player'] = None
-                        moves_left = len(game['moves']) - m
+                        moves_left = len(game['moves']) - (m + 1)# want an exponent of 0 at the last index
                         # discounted final reward
                         move['G'] = 0.5 + (winner - 0.5)*(disc_factor**moves_left)
+                        Gs.add(move['G'])
                         depths[p][-1].append(func(move))
                 except:
                     pass
@@ -131,5 +136,5 @@ def get_depths(report, test_agents, func=lambda x: x['depth'], disc_factor = 0.9
                 clean.append(game)
 
         out_depths[p.name] = clean
-
+    print(list(Gs))
     return out_depths

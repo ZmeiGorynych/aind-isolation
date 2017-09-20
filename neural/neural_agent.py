@@ -3,7 +3,7 @@ import numpy as np
 from constants import BOARD_SIZE
 from data_utils import prepare_data_for_model, apply_move
 from neural.neural_ import to_pair, get_legal_moves
-
+from keras.activations import softmax
 
 # in the below, game is a dict with the fields
 # 'pos' is [pos of player about to move, other_pos]
@@ -21,7 +21,7 @@ from neural.neural_ import to_pair, get_legal_moves
 #         return moves[best_ind], valuations[best_ind]
 #     else:
 #         return (0,float('-inf'))
-def get_best_move_from_model(game, model):
+def get_best_move_from_model(game, model, temperature = 1.0):
     board, pos, legal_moves, _, _ = prepare_data_for_model([game], None)
     move_probs = model.predict([board, pos, legal_moves])[0].T[0]
     if True:
@@ -30,9 +30,10 @@ def get_best_move_from_model(game, model):
     else:
         leg_moves = get_legal_moves(game)
         if not len(leg_moves): # if no legal moves left
-            return (0,0)
+            return (-1,-1)
         move_probs_legal = move_probs[leg_moves]
-        best_move = leg_moves[np.argmin(move_probs_legal)]
+        p = softmax(move_probs_legal/temperature)
+        best_move = np.random.choice(leg_moves, p=p)
     return best_move, move_probs[best_move]
 
 

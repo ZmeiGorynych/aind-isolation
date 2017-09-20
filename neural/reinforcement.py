@@ -2,7 +2,8 @@ from collections import deque
 from math import sqrt
 import numpy as np
 from data_utils import prepare_data_for_model
-
+from tournament import tournament, Agent, CustomPlayerComp, improved_score_fast_x2
+from data_utils import get_depths
 
 class Memory:
     def __init__(self, max_size=1000, sampling_ratio=1.01):
@@ -51,3 +52,14 @@ def generate_target(states, deep_Q_model, alpha=0.5, discount_factor=0.99):
     target_from_G = G.T[0]
     target = alpha * target_from_Q + (1 - alpha) * target_from_G
     return board_full, player_pos, legal_moves, next_move, target #, target_from_Q, target_from_G.T[0]
+
+def run_tournament(trainee_, num_rounds = 10, time_limit=float('inf'), discount_factor=0.99 ):
+    result, win_ratio = tournament(num_rounds, test_agents = [trainee_], time_limit = time_limit)
+    #print(result)
+    nice_data = get_depths(result, [trainee_], lambda x:x, discount_factor)
+    #print(nice_data)
+    # TODO: nicer handling of final states, so wins/losses also propagate from final values via Q, not just via G
+    states = [state for game in nice_data[trainee_.name] for state in game]
+    print('imported',len(states), 'states')
+    return states, result, win_ratio
+
